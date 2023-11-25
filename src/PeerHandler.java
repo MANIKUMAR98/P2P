@@ -3,17 +3,10 @@ package src;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.charset.*;
+import java.nio.ByteBuffer;
 import java.util.BitSet;
-import java.nio.*;
-import java.lang.*;
-
-import src.ActualMessage;
-import src.HandshakeMessage;
-import src.PeerAdmin;
 
 public class PeerHandler implements Runnable {
 	private Socket listener;
@@ -71,7 +64,7 @@ public class PeerHandler implements Runnable {
 					if (this.peerAdmin.hasFile() || this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() > 0) {
 						this.sendBitField();
 					}
-				} 
+				}
 				else {
 					while (this.in.available() < 4) {
 					}
@@ -81,117 +74,233 @@ public class PeerHandler implements Runnable {
 					char messageType = (char) response[0];
 					ActualMessage am = new ActualMessage();
 					am.readActualMessage(respLen, response);
-					if (messageType == '0') {
-						// Handles choke message
-						this.peerAdmin.resetRequested(this.endPeerID);
-						this.peerAdmin.getLogger().chokingNeighbor(this.endPeerID);
-					} 
-					else if (messageType == '1') {
-						// Handles Unchoke message
-						int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
-						if (requestindex == -1) {
-							this.sendNotInterestedMessage();
-						} 
-						else {
-							this.sendRequestMessage(requestindex);
-						}
-						this.peerAdmin.getLogger().unchokedNeighbor(this.endPeerID);
-					} 
-					else if (messageType == '2') {
-						// Handles Interested Message
-						this.peerAdmin.addToInterestedList(this.endPeerID);
-						this.peerAdmin.getLogger().receiveInterested(this.endPeerID);
-					} 
-					else if (messageType == '3') {
-						// Handles NotInterested Message
-						this.peerAdmin.removeFromInterestedList(this.endPeerID);
-						this.peerAdmin.getLogger().receiveNotInterested(this.endPeerID);
-					} 
-					else if (messageType == '4') {
-						// Handles Have Message
-						int pieceIndex = am.getPieceIndexFromPayload();
-						this.peerAdmin.updatePieceAvailability(this.endPeerID, pieceIndex);
-						if (this.peerAdmin.checkIfAllPeersAreDone()) {
-							this.peerAdmin.cancelChokes();
-						}
-						if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
-							this.sendInterestedMessage();
-						} 
-						else {
-							this.sendNotInterestedMessage();
-						}
-						this.peerAdmin.getLogger().receiveHave(this.endPeerID, pieceIndex);
-					} 
-					else if (messageType == '5') {
-						// Handles BitField message
-						BitSet bset = am.getBitFieldMessage();
-						this.processBitFieldMessage(bset);
-						if (!this.peerAdmin.hasFile()) {
-							if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
-								this.sendInterestedMessage();
-							} 
-							else {
-								this.sendNotInterestedMessage();
-							}
-						}
-					} 
-					else if (messageType == '6') {
-						// Handles Request Message
-						if (this.peerAdmin.getUnchokedList().contains(this.endPeerID)
-								|| (this.peerAdmin.getOptimisticUnchokedPeer() != null && this.peerAdmin.getOptimisticUnchokedPeer().compareTo(this.endPeerID) == 0)) {
-							int pieceIndex = am.getPieceIndexFromPayload();
-							this.sendPieceMessage(pieceIndex, this.peerAdmin.readFromFile(pieceIndex));
-						} 
-					} 
-					else if (messageType == '7') {
-						// Handle Piece Message
-						int pieceIndex = am.getPieceIndexFromPayload();
-						byte[] piece = am.getPieceFromPayload();
-						this.peerAdmin.writeToFile(piece, pieceIndex);
-						this.peerAdmin.updatePieceAvailability(this.peerAdmin.getPeerID(), pieceIndex);
-						this.downloadRate++;
-						Boolean alldone = this.peerAdmin.checkIfAllPeersAreDone();
-						this.peerAdmin.getLogger().downloadPiece(this.endPeerID, pieceIndex,
-								this.peerAdmin.getCompletedPieceCount());
-						this.peerAdmin.setRequestedInfo(pieceIndex, null);
-						this.peerAdmin.broadcastHave(pieceIndex);
-						if (this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() != this.peerAdmin
-								.getPieceCount()) {
-							int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
-							if (requestindex != -1) {
-								this.sendRequestMessage(requestindex);
-							} 
-							else {
-								this.sendNotInterestedMessage();
-							}
-						} 
-						else {
-							this.peerAdmin.getLogger().downloadComplete();
-							if (alldone) {
-								this.peerAdmin.cancelChokes();
-							}
-							this.sendNotInterestedMessage();
-						}
-					} 
-					else {
-						System.out.println("Received other message");
-					}
+					processMessageType(Constants.MessageType.fromCode(messageType), am);
+//					if (messageType == '0') {
+//						// Handles choke message
+//						this.peerAdmin.resetRequested(this.endPeerID);
+//						this.peerAdmin.getLogger().chokingNeighbor(this.endPeerID);
+//					}
+//					else if (messageType == '1') {
+//						// Handles Unchoke message
+//						int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
+//						if (requestindex == -1) {
+//							this.sendNotInterestedMessage();
+//						}
+//						else {
+//							this.sendRequestMessage(requestindex);
+//						}
+//						this.peerAdmin.getLogger().unchokedNeighbor(this.endPeerID);
+//					}
+//					else if (messageType == '2') {
+//						// Handles Interested Message
+//						this.peerAdmin.addToInterestedList(this.endPeerID);
+//						this.peerAdmin.getLogger().receiveInterested(this.endPeerID);
+//					}
+//					else if (messageType == '3') {
+//						// Handles NotInterested Message
+//						this.peerAdmin.removeFromInterestedList(this.endPeerID);
+//						this.peerAdmin.getLogger().receiveNotInterested(this.endPeerID);
+//					}
+//					else if (messageType == '4') {
+//						// Handles Have Message
+//						int pieceIndex = am.getPieceIndexFromPayload();
+//						this.peerAdmin.updatePieceAvailability(this.endPeerID, pieceIndex);
+//						if (this.peerAdmin.checkIfAllPeersAreDone()) {
+//							this.peerAdmin.cancelChokes();
+//						}
+//						if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
+//							this.sendInterestedMessage();
+//						}
+//						else {
+//							this.sendNotInterestedMessage();
+//						}
+//						this.peerAdmin.getLogger().receiveHave(this.endPeerID, pieceIndex);
+//					}
+//					else if (messageType == '5') {
+//						// Handles BitField message
+//						BitSet bset = am.getBitFieldMessage();
+//						this.processBitFieldMessage(bset);
+//						if (!this.peerAdmin.hasFile()) {
+//							if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
+//								this.sendInterestedMessage();
+//							}
+//							else {
+//								this.sendNotInterestedMessage();
+//							}
+//						}
+//					}
+//					else if (messageType == '6') {
+//						// Handles Request Message
+//						if (this.peerAdmin.getUnchokedList().contains(this.endPeerID)
+//								|| (this.peerAdmin.getOptimisticUnchokedPeer() != null && this.peerAdmin.getOptimisticUnchokedPeer().compareTo(this.endPeerID) == 0)) {
+//							int pieceIndex = am.getPieceIndexFromPayload();
+//							this.sendPieceMessage(pieceIndex, this.peerAdmin.readFromFile(pieceIndex));
+//						}
+//					}
+//					else if (messageType == '7') {
+//						// Handle Piece Message
+//						int pieceIndex = am.getPieceIndexFromPayload();
+//						byte[] piece = am.getPieceFromPayload();
+//						this.peerAdmin.writeToFile(piece, pieceIndex);
+//						this.peerAdmin.updatePieceAvailability(this.peerAdmin.getPeerID(), pieceIndex);
+//						this.downloadRate++;
+//						Boolean alldone = this.peerAdmin.checkIfAllPeersAreDone();
+//						this.peerAdmin.getLogger().downloadPiece(this.endPeerID, pieceIndex,
+//								this.peerAdmin.getCompletedPieceCount());
+//						this.peerAdmin.setRequestedInfo(pieceIndex, null);
+//						this.peerAdmin.broadcastHave(pieceIndex);
+//						if (this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() != this.peerAdmin
+//								.getPieceCount()) {
+//							int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
+//							if (requestindex != -1) {
+//								this.sendRequestMessage(requestindex);
+//							}
+//							else {
+//								this.sendNotInterestedMessage();
+//							}
+//						}
+//						else {
+//							this.peerAdmin.getLogger().downloadComplete();
+//							if (alldone) {
+//								this.peerAdmin.cancelChokes();
+//							}
+//							this.sendNotInterestedMessage();
+//						}
+//					}
+//					else {
+//						System.out.println("Received other message");
+//					}
 				}
 			}
-		} 
+		}
 		catch (SocketException e) {
 			System.out.println("Socket exception");
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
+	private void processMessageType(Constants.MessageType msgType, ActualMessage am) {
+		switch (msgType) {
+			case CHOKE:
+				handleChokeMessage();
+				break;
+			case UNCHOKE:
+				handleUnchokeMessage();
+				break;
+			case INTERESTED:
+				handleInterestedMessage();
+				break;
+			case NOT_INTERESTED:
+				handleNotInterestedMessage();
+				break;
+			case HAVE:
+				handleHaveMessage(am.getPieceIndexFromPayload());
+				break;
+			case BITFIELD:
+				handleBitFieldMessage(am.getBitFieldMessage());
+				break;
+			case REQUEST:
+				handleRequestMessage(am);
+				break;
+			case PIECE:
+				handlePieceMessage(am);
+				break;
+			default:
+				System.out.println("Received other message");
+		}
+	}
+
+	private void handleChokeMessage() {
+		this.peerAdmin.resetRequested(this.endPeerID);
+		this.peerAdmin.getLogger().chokingNeighbor(this.endPeerID);
+	}
+
+	private void handleUnchokeMessage() {
+		int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
+		if (requestindex == -1) {
+			this.sendNotInterestedMessage();
+		} else {
+			this.sendRequestMessage(requestindex);
+		}
+		this.peerAdmin.getLogger().unchokedNeighbor(this.endPeerID);
+	}
+
+	private void handleInterestedMessage() {
+		this.peerAdmin.addToInterestedList(this.endPeerID);
+		this.peerAdmin.getLogger().receiveInterested(this.endPeerID);
+	}
+
+	private void handleNotInterestedMessage() {
+		this.peerAdmin.removeFromInterestedList(this.endPeerID);
+		this.peerAdmin.getLogger().receiveNotInterested(this.endPeerID);
+	}
+
+	private void handleHaveMessage(int pieceIndex) {
+		this.peerAdmin.updatePieceAvailability(this.endPeerID, pieceIndex);
+		if (this.peerAdmin.checkIfAllPeersAreDone()) {
+			this.peerAdmin.cancelChokes();
+		}
+		if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
+			this.sendInterestedMessage();
+		} else {
+			this.sendNotInterestedMessage();
+		}
+		this.peerAdmin.getLogger().receiveHave(this.endPeerID, pieceIndex);
+	}
+
+	private void handleBitFieldMessage(BitSet bset) {
+		this.processBitFieldMessage(bset);
+		if (!this.peerAdmin.hasFile()) {
+			if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
+				this.sendInterestedMessage();
+			} else {
+				this.sendNotInterestedMessage();
+			}
+		}
+	}
+
+	private void handleRequestMessage(ActualMessage am) {
+		if (this.peerAdmin.getUnchokedList().contains(this.endPeerID)
+				|| (this.peerAdmin.getOptimisticUnchokedPeer() != null && this.peerAdmin.getOptimisticUnchokedPeer().compareTo(this.endPeerID) == 0)) {
+			int pieceIndex = am.getPieceIndexFromPayload();
+			this.sendPieceMessage(pieceIndex, this.peerAdmin.readFromFile(pieceIndex));
+		}
+	}
+
+	private void handlePieceMessage(ActualMessage am) {
+		int pieceIndex = am.getPieceIndexFromPayload();
+		byte[] piece = am.getPieceFromPayload();
+		this.peerAdmin.writeToFile(piece, pieceIndex);
+		this.peerAdmin.updatePieceAvailability(this.peerAdmin.getPeerID(), pieceIndex);
+		this.downloadRate++;
+		Boolean alldone = this.peerAdmin.checkIfAllPeersAreDone();
+		this.peerAdmin.getLogger().downloadPiece(this.endPeerID, pieceIndex,
+				this.peerAdmin.getCompletedPieceCount());
+		this.peerAdmin.setRequestedInfo(pieceIndex, null);
+		this.peerAdmin.broadcastHave(pieceIndex);
+		if (this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() != this.peerAdmin
+				.getPieceCount()) {
+			int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
+			if (requestindex != -1) {
+				this.sendRequestMessage(requestindex);
+			} else {
+				this.sendNotInterestedMessage();
+			}
+		} else {
+			this.peerAdmin.getLogger().downloadComplete();
+			if (alldone) {
+				this.peerAdmin.cancelChokes();
+			}
+			this.sendNotInterestedMessage();
+		}
+	}
 	public synchronized void send(byte[] obj) {
 		try {
 			this.out.write(obj);
 			this.out.flush();
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -201,7 +310,7 @@ public class PeerHandler implements Runnable {
 		try {
 			ActualMessage am = new ActualMessage('0');
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -211,7 +320,7 @@ public class PeerHandler implements Runnable {
 		try {
 			ActualMessage am = new ActualMessage('1');
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -221,7 +330,7 @@ public class PeerHandler implements Runnable {
 		try {
 			ActualMessage am = new ActualMessage('2');
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -231,7 +340,7 @@ public class PeerHandler implements Runnable {
 		try {
 			ActualMessage am = new ActualMessage('3');
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -242,7 +351,7 @@ public class PeerHandler implements Runnable {
 			byte[] bytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
 			ActualMessage am = new ActualMessage('4', bytes);
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -253,7 +362,7 @@ public class PeerHandler implements Runnable {
 			BitSet myAvailability = this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID());
 			ActualMessage am = new ActualMessage('5', myAvailability.toByteArray());
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -264,7 +373,7 @@ public class PeerHandler implements Runnable {
 			byte[] bytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
 			ActualMessage am = new ActualMessage('6', bytes);
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -278,7 +387,7 @@ public class PeerHandler implements Runnable {
 			stream.write(payload);
 			ActualMessage am = new ActualMessage('7', stream.toByteArray());
 			this.send(am.buildActualMessage());
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -293,11 +402,11 @@ public class PeerHandler implements Runnable {
 			this.connectionEstablished = true;
 			if (this.initializer) {
 				this.peerAdmin.getLogger().genTCPConnLogSender(this.endPeerID);
-			} 
+			}
 			else {
 				this.peerAdmin.getLogger().genTCPConnLogReceiver(this.endPeerID);
 			}
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
