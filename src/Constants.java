@@ -28,4 +28,10 @@ public class Constants {
         }
 
         // Add other constants or enums as needed
+        public static final String NUMBER_OF_PREFERRED_NEIGHBORS = "NumberOfPreferredNeighbors";
+        public static final String UNCHOKING_INTERVAL = "UnchokingInterval";
+        public static final String OPTIMISTIC_UNCHOKING_INTERVAL = "OptimisticUnchokingInterval";
+        public static final String FILE_NAME = "FileName";
+        public static final String FILE_SIZE = "FileSize";
+        public static final String PIECE_SIZE = "PieceSize";
 }

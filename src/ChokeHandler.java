@@ -1,15 +1,9 @@
 package src;
 
-import java.io.ByteArrayOutputStream;
-import java.net.Socket;
-import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.nio.*;
-import java.lang.*;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 import static java.util.stream.Collectors.*;
 import java.util.concurrent.TimeUnit;
 
@@ -89,7 +83,7 @@ public class ChokeHandler implements Runnable {
                 }
                 this.peerAdmin.updateUnchokedList(newlist);
                 if(newlist.size() > 0){
-                    this.peerAdmin.getLogger().changePreferredNeigbors(new ArrayList<>(newlist));
+                    this.peerAdmin.getClientLogger().updatePreferredNeighbors(new ArrayList<>(newlist));
                 }
                 for (String peer : unchokedlist) {
                     PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);

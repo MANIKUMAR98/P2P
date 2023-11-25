@@ -1,9 +1,6 @@
 
-import java.io.*;
-import java.util.*;
 
 import src.PeerAdmin;
-import src.PeerLogger;
 
 public class PeerProcess {
 	public static void main(String[] args) {

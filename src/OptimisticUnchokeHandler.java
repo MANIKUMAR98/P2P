@@ -53,8 +53,7 @@ public class OptimisticUnchokeHandler implements Runnable {
                 if(nextPeer != null) {
                     PeerHandler nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
                     nextHandler.sendUnChokedMessage();
-                    this.peerAdmin.getLogger()
-                            .changeOptimisticallyUnchokedNeighbor(this.peerAdmin.getOptimisticUnchokedPeer());
+                    this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.peerAdmin.getOptimisticUnchokedPeer());
                 } 
                 if (optUnchoked != null && !this.peerAdmin.getUnchokedList().contains(optUnchoked)) {
                     this.peerAdmin.getPeerHandler(optUnchoked).sendChokedMessage();

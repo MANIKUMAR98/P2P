@@ -1,24 +1,13 @@
 package src;
 
 import java.io.*;
-import java.lang.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
 
-import src.PeerHandler;
-import src.PeerInfoConfig;
-import src.PeerLogger;
-import src.PeerServer;
-import src.RemotePeerInfo;
-import src.ChokeHandler;
-import src.OptimisticUnchokeHandler;
 
 public class PeerAdmin {
 	private String peerID;
@@ -29,9 +18,9 @@ public class PeerAdmin {
 	private volatile HashMap<String, Thread> joinedThreads;
 	private volatile ServerSocket listener;
 	private PeerServer server;
-	private CommonConfig commonConfig;
+	private CommonConfiguration commonConfiguration;
 	private PeerInfoConfig peerInfoConfig;
-	private volatile PeerLogger logger;
+	private volatile ClientLogger clientLogger;
 	private volatile HashMap<String, BitSet> piecesAvailability;
 	private volatile String[] requestedInfo;
 	private volatile HashSet<String> unChokedList;
@@ -53,9 +42,9 @@ public class PeerAdmin {
 		this.peerList = new ArrayList<>();
 		this.joinedPeers = new HashMap<>();
 		this.joinedThreads = new HashMap<>();
-		this.commonConfig = new CommonConfig();
+		this.commonConfiguration = new CommonConfiguration();
 		this.peerInfoConfig = new PeerInfoConfig();
-		this.logger = new PeerLogger(this.peerID);
+		this.clientLogger = new ClientLogger(peerID);
 		this.iamDone = false;
 		this.unChokedList = new HashSet<>();
 		this.interestedList = new HashSet<>();
@@ -70,7 +59,7 @@ public class PeerAdmin {
 
 	public void initPeer() {
 		try {
-			this.commonConfig.loadCommonFile();
+			this.commonConfiguration.InitilizeCommonConfiguration();;
 			this.peerInfoConfig.loadConfigFile();
 			this.pieceCount = this.calcPieceCount();
 			this.requestedInfo = new String[this.pieceCount];
@@ -264,8 +253,8 @@ public class PeerAdmin {
 		return this.peerID;
 	}
 
-	public PeerLogger getLogger() {
-		return this.logger;
+	public ClientLogger getClientLogger() {
+		return this.clientLogger;
 	}
 
 	public boolean hasFile() {
@@ -273,27 +262,27 @@ public class PeerAdmin {
 	}
 
 	public int getNoOfPreferredNeighbors() {
-		return this.commonConfig.NumberOfPreferredNeighbors;
+		return this.commonConfiguration.numberOfPreferredNeighbors;
 	}
 
 	public int getUnchockingInterval() {
-		return this.commonConfig.UnchokingInterval;
+		return this.commonConfiguration.unchokingInterval;
 	}
 
 	public int getOptimisticUnchockingInterval() {
-		return this.commonConfig.OptimisticUnchokingInterval;
+		return this.commonConfiguration.optimisticUnchokingInterval;
 	}
 
 	public String getFileName() {
-		return this.commonConfig.FileName;
+		return this.commonConfiguration.fileName;
 	}
 
 	public int getFileSize() {
-		return this.commonConfig.FileSize;
+		return this.commonConfiguration.fileSize;
 	}
 
 	public int getPieceSize() {
-		return this.commonConfig.PieceSize;
+		return this.commonConfiguration.pieceSize;
 	}
 
 	public int calcPieceCount() {
@@ -401,7 +390,7 @@ public class PeerAdmin {
 			this.setOptimisticUnchokdPeer(null);
 			this.resetInterestedList();
 			this.getRefFile().close();
-			this.getLogger().closeLogger();
+			this.getClientLogger().closeTheClientLogger();
 			this.getListener().close();
 			this.getServerThread().stop();
 			this.iamDone = true;

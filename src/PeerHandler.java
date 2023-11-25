@@ -3,14 +3,10 @@ package src;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.charset.*
 import java.nio.*;
 import java.util.BitSet;
-import java.nio.*;
-import java.lang.*;
 
 public class PeerHandler implements Runnable {
 	private Socket listener;
@@ -218,7 +214,7 @@ public class PeerHandler implements Runnable {
 
 	private void handleChokeMessage() {
 		this.peerAdmin.resetRequested(this.endPeerID);
-		this.peerAdmin.getLogger().chokingNeighbor(this.endPeerID);
+		this.peerAdmin.getClientLogger().storeChokingNeighborLog(this.endPeerID);
 	}
 
 	private void handleUnchokeMessage() {
@@ -228,17 +224,17 @@ public class PeerHandler implements Runnable {
 		} else {
 			this.sendRequestMessage(requestindex);
 		}
-		this.peerAdmin.getLogger().unchokedNeighbor(this.endPeerID);
+		this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.endPeerID); 
 	}
 
 	private void handleInterestedMessage() {
 		this.peerAdmin.addToInterestedList(this.endPeerID);
-		this.peerAdmin.getLogger().receiveInterested(this.endPeerID);
+		this.peerAdmin.getClientLogger().storeInterestedLog(this.endPeerID);
 	}
 
 	private void handleNotInterestedMessage() {
 		this.peerAdmin.removeFromInterestedList(this.endPeerID);
-		this.peerAdmin.getLogger().receiveNotInterested(this.endPeerID);
+		this.peerAdmin.getClientLogger().storeNotInterestedLog(this.endPeerID);
 	}
 
 	private void handleHaveMessage(int pieceIndex) {
@@ -251,7 +247,7 @@ public class PeerHandler implements Runnable {
 		} else {
 			this.sendNotInterestedMessage();
 		}
-		this.peerAdmin.getLogger().receiveHave(this.endPeerID, pieceIndex);
+		this.peerAdmin.getClientLogger().storeHaveLog(this.endPeerID, pieceIndex);
 	}
 
 	private void handleBitFieldMessage(BitSet bset) {
@@ -280,8 +276,7 @@ public class PeerHandler implements Runnable {
 		this.peerAdmin.updatePieceAvailability(this.peerAdmin.getPeerID(), pieceIndex);
 		this.downloadRate++;
 		Boolean alldone = this.peerAdmin.checkIfAllPeersAreDone();
-		this.peerAdmin.getLogger().downloadPiece(this.endPeerID, pieceIndex,
-				this.peerAdmin.getCompletedPieceCount());
+		this.peerAdmin.getClientLogger().storeDownloadedPieceLog(this.endPeerID, pieceIndex, this.peerAdmin.getCompletedPieceCount());
 		this.peerAdmin.setRequestedInfo(pieceIndex, null);
 		this.peerAdmin.broadcastHave(pieceIndex);
 		if (this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() != this.peerAdmin
@@ -293,7 +288,7 @@ public class PeerHandler implements Runnable {
 				this.sendNotInterestedMessage();
 			}
 		} else {
-			this.peerAdmin.getLogger().downloadComplete();
+			this.peerAdmin.getClientLogger().storeTheDownloadCompleteLog();
 			if (alldone) {
 				this.peerAdmin.cancelChokes();
 			}
@@ -405,10 +400,10 @@ public class PeerHandler implements Runnable {
 			this.peerAdmin.addJoinedThreads(this.endPeerID, Thread.currentThread());
 			this.connectionEstablished = true;
 			if (this.initializer) {
-				this.peerAdmin.getLogger().genTCPConnLogSender(this.endPeerID);
+				this.peerAdmin.getClientLogger().tcpConnectionLogSenderGenerator(this.endPeerID);
 			}
 			else {
-				this.peerAdmin.getLogger().genTCPConnLogReceiver(this.endPeerID);
+				this.peerAdmin.getClientLogger().tcpConnectionLogReceiverGenerator(this.endPeerID);
 			}
 		}
 		catch (Exception e) {

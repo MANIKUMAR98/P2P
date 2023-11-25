@@ -14,26 +14,25 @@ public class ClientLogger {
 	 private Utility utility;
 	 private Logger clientLogger = Logger.getLogger("ClientLogger");
 	 
-	 public ClientLogger() {
+	 public ClientLogger(String peerId) {
 		try {
+			this.peerId = peerId;
 			 utility = new Utility();
 			 this.loggingFile = "log_peer_" + this.peerId + ".log";
 	         this.logFileHandlerForPeer = new FileHandler(this.loggingFile, false);
-	         System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s %n");
-	         this.logFileHandlerForPeer.setFormatter(new SimpleFormatter());
-	         this.clientLogger.setUseParentHandlers(false);
-	         this.clientLogger.addHandler(this.logFileHandlerForPeer);
+	         initilizeFormat();
 		} catch (Exception e) {
 			System.err.println("Exception occurred while instantiating the Client Logger: " + e);
 		}
 	 }
-	 
-	 
-	    public void setPeerId(String peerId) {
-		   this.peerId = peerId;
+	    private void initilizeFormat() {
+	    	System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s %n");
+	        this.logFileHandlerForPeer.setFormatter(new SimpleFormatter());
+	        this.clientLogger.setUseParentHandlers(false);
+	        this.clientLogger.addHandler(this.logFileHandlerForPeer);
 	    }
-	 
-	    public synchronized void tcpConnectionLogSenderGenerator(String peer) {
+	    
+		public synchronized void tcpConnectionLogSenderGenerator(String peer) {
 	        this.clientLogger.log(Level.INFO, "[" + utility.getCurrentTime() + "]: Peer [" + this.peerId + "] makes a connection to Peer " + "[" + peer + "].");
 	    }
 	    
