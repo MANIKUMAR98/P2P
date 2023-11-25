@@ -3,8 +3,10 @@ package src;
 import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.net.Socket;
 import java.net.SocketException;
+import java.nio.charset.*
 import java.nio.*;
 import java.util.BitSet;
 import java.nio.*;
