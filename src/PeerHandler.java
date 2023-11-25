@@ -5,8 +5,10 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.ByteBuffer;
+import java.nio.*;
 import java.util.BitSet;
+import java.nio.*;
+import java.lang.*;
 
 public class PeerHandler implements Runnable {
 	private Socket listener;
