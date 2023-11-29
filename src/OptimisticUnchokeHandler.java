@@ -1,16 +1,9 @@
 package src;
 
-import java.io.ByteArrayOutputStream;
-import java.net.Socket;
-import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.nio.*;
-import java.lang.*;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-import static java.util.stream.Collectors.*;
 import java.util.concurrent.TimeUnit;
 
 public class OptimisticUnchokeHandler implements Runnable {
@@ -54,8 +47,7 @@ public class OptimisticUnchokeHandler implements Runnable {
                 if(nextPeer != null) {
                     PeerHandler nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
                     nextHandler.messageSender.sendUnChokedMessage();
-                    this.peerAdmin.getLogger()
-                            .changeOptimisticallyUnchokedNeighbor(this.peerAdmin.getOptimisticUnchokedPeer());
+                    this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.peerAdmin.getOptimisticUnchokedPeer());
                 }
                 if (optUnchoked != null && !this.peerAdmin.getUnchokedList().contains(optUnchoked)) {
                     this.peerAdmin.getPeerHandler(optUnchoked).messageSender.sendChokedMessage();

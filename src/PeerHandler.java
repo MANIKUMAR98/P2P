@@ -159,7 +159,6 @@ public class PeerHandler implements Runnable {
 		} else {
 			this.peerAdmin.setRequestedInfo(requestindex, this.endPeerID);
 			this.messageSender.sendRequestMessage(requestindex);
-			this.peerAdmin.getLogger().sendRequest(this.endPeerID, requestindex );
 		}
 		this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.endPeerID);
 	}
@@ -222,7 +221,6 @@ public class PeerHandler implements Runnable {
 			if(!this.choked){
 				if (requestindex != -1) {
 					this.messageSender.sendRequestMessage(requestindex);
-					this.peerAdmin.getLogger().sendRequest(this.endPeerID, requestindex);
 				} else {
 					if(!this.peerAdmin.checkIfInterested(this.endPeerID))
 						this.messageSender.sendNotInterestedMessage();

@@ -92,7 +92,7 @@ public class ChokeHandler implements Runnable {
                 }
                 this.peerAdmin.updateUnchokedList(newlist);
                 if(newlist.size() > 0){
-                    this.peerAdmin.getLogger().changePreferredNeigbors(new ArrayList<>(newlist));
+                    this.peerAdmin.getClientLogger().updatePreferredNeighbors(new ArrayList<>(newlist));
                 }
 //                for (String peer : unchokedlist) {
 //                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
