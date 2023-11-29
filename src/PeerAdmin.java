@@ -81,7 +81,7 @@ public class PeerAdmin {
 			this.initializePieceAvailability();
 			this.startServer();
 			this.createNeighbourConnections();
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -93,7 +93,7 @@ public class PeerAdmin {
 			this.server = new PeerServer(this.peerID, this.listener, this);
 			this.serverThread = new Thread(this.server);
 			this.serverThread.start();
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -105,7 +105,7 @@ public class PeerAdmin {
 			for (String pid : this.peerList) {
 				if (pid.equals(this.peerID)) {
 					break;
-				} 
+				}
 				else {
 					RemotePeerInfo peer = this.peerInfoMap.get(pid);
 					Socket temp = new Socket(peer.peerAddress, peer.peerPort);
@@ -117,7 +117,7 @@ public class PeerAdmin {
 					t.start();
 				}
 			}
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -129,7 +129,7 @@ public class PeerAdmin {
 			if (this.peerInfoMap.get(pid).containsFile == 1) {
 				availability.set(0, this.pieceCount);
 				this.piecesAvailability.put(pid, availability);
-			} 
+			}
 			else {
 				availability.clear();
 				this.piecesAvailability.put(pid, availability);
@@ -142,7 +142,7 @@ public class PeerAdmin {
 			int position = this.getPieceSize() * pieceindex;
 			this.fileRaf.seek(position);
 			this.fileRaf.write(data);
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -159,7 +159,7 @@ public class PeerAdmin {
 			byte[] data = new byte[size];
 			this.fileRaf.read(data);
 			return data;
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 
@@ -177,7 +177,7 @@ public class PeerAdmin {
 
 	public synchronized void broadcastHave(int pieceIndex) {
 		for (String key : this.joinedPeers.keySet()) {
-			this.joinedPeers.get(key).sendHaveMessage(pieceIndex);
+			this.joinedPeers.get(key).messageSender.sendHaveMessage(pieceIndex);
 		}
 	}
 
@@ -395,7 +395,7 @@ public class PeerAdmin {
 			this.getServerThread().stop();
 			this.iamDone = true;
 			this.terminateHandler.startJob(6);
-		} 
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}

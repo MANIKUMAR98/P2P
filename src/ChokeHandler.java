@@ -37,6 +37,7 @@ public class ChokeHandler implements Runnable {
                     for (int i = 0; i < iter; i++) {
                         String nextPeer = interested.get(this.rand.nextInt(interested.size()));
                         PeerHandler nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
+//                      /for not selecting not se;ecting same peer which is in newlist
                         while (newlist.contains(nextPeer)) {
                             nextPeer = interested.get(this.rand.nextInt(interested.size()));
                             nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
@@ -44,16 +45,18 @@ public class ChokeHandler implements Runnable {
                         if (!unchokedlist.contains(nextPeer)) {
                             if (this.peerAdmin.getOptimisticUnchokedPeer() == null
                                     || this.peerAdmin.getOptimisticUnchokedPeer().compareTo(nextPeer) != 0) {
-                                nextHandler.sendUnChokedMessage();
+                                this.peerAdmin.getUnchokedList().add(nextPeer);
+                                nextHandler.messageSender.sendUnChokedMessage();
+
                             }
-                        } 
+                        }
                         else {
                             unchokedlist.remove(nextPeer);
                         }
                         newlist.add(nextPeer);
                         nextHandler.resetDownloadRate();
                     }
-                } 
+                }
                 else {
                     Map<String, Integer> downloads = new HashMap<>(this.peerAdmin.getDownloadRates());
                     Map<String, Integer> rates = downloads.entrySet().stream()
@@ -69,9 +72,11 @@ public class ChokeHandler implements Runnable {
                             if (!unchokedlist.contains(ent.getKey())) {
                                 String optUnchoke = this.peerAdmin.getOptimisticUnchokedPeer();
                                 if (optUnchoke == null || optUnchoke.compareTo(ent.getKey()) != 0) {
-                                    nextHandler.sendUnChokedMessage();
+                                    this.peerAdmin.getUnchokedList().add(ent.getKey());
+                                    nextHandler.messageSender.sendUnChokedMessage();
+
                                 }
-                            } 
+                            }
                             else {
                                 unchokedlist.remove(ent.getKey());
                             }
@@ -81,26 +86,30 @@ public class ChokeHandler implements Runnable {
                         }
                     }
                 }
-                this.peerAdmin.updateUnchokedList(newlist);
-                if(newlist.size() > 0){
-                    this.peerAdmin.getClientLogger().updatePreferredNeighbors(new ArrayList<>(newlist));
-                }
                 for (String peer : unchokedlist) {
                     PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
-                    nextHandler.sendChokedMessage();
+                    nextHandler.messageSender.sendChokedMessage();
                 }
-            } 
+                this.peerAdmin.updateUnchokedList(newlist);
+                if(newlist.size() > 0){
+                    this.peerAdmin.getLogger().changePreferredNeigbors(new ArrayList<>(newlist));
+                }
+//                for (String peer : unchokedlist) {
+//                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
+//                    nextHandler.messageSender.sendChokedMessage();
+//                }
+            }
             else {
                 this.peerAdmin.resetUnchokedList();
                 for (String peer : unchokedlist) {
                     PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
-                    nextHandler.sendChokedMessage();
+                    nextHandler.messageSender.sendChokedMessage();
                 }
                 if(this.peerAdmin.checkIfAllPeersAreDone()) {
                     this.peerAdmin.cancelChokes();
                 }
             }
-        } 
+        }
         catch (Exception e) {
             e.printStackTrace();
         }
