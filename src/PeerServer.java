@@ -21,14 +21,14 @@ public class PeerServer implements Runnable {
 		while (!this.dead) {
 			try {
 				Socket neighbour = this.listener.accept();
-				PeerHandler neighbourHandler = new PeerHandler(neighbour, this.peerAdmin);
+				PeerController neighbourHandler = new PeerController(neighbour, this.peerAdmin);
 				new Thread(neighbourHandler).start();
 				String addr = neighbour.getInetAddress().toString();
 				int port = neighbour.getPort();
-			} 
+			}
 			catch (SocketException e) {
 				break;
-			} 
+			}
 			catch (Exception e) {
 				e.printStackTrace();
 				break;

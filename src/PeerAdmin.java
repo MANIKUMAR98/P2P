@@ -15,7 +15,7 @@ public class PeerAdmin {
 	private RemotePeerInfo myConfig;
 	private HashMap<String, RemotePeerInfo> peerInfoMap;
 	private ArrayList<String> peerList;
-	private volatile HashMap<String, PeerHandler> joinedPeers;
+	private volatile HashMap<String, PeerController> joinedPeers;
 	private volatile HashMap<String, Thread> joinedThreads;
 	private volatile ServerSocket listener;
 	private PeerServer server;
@@ -112,7 +112,7 @@ public class PeerAdmin {
 				else {
 					RemotePeerInfo peer = this.peerInfoMap.get(pid);
 					Socket temp = new Socket(peer.peerAddress, peer.peerPort);
-					PeerHandler p = new PeerHandler(temp, this);
+					PeerController p = new PeerController(temp, this);
 					p.setPeerControllerId(pid);
 					this.addJoinedPeer(p, pid);
 					Thread t = new Thread(p);
@@ -180,7 +180,7 @@ public class PeerAdmin {
 
 	public synchronized void broadcastHave(int pieceIndex) {
 		for (String key : this.joinedPeers.keySet()) {
-			this.joinedPeers.get(key).messageSender.sendHaveMessage(pieceIndex);
+			this.joinedPeers.get(key).messageSender.issueHaveMessage(pieceIndex);
 		}
 	}
 
@@ -197,7 +197,7 @@ public class PeerAdmin {
 		this.piecesAvailability.put(peerID, b);
 	}
 
-	public synchronized void addJoinedPeer(PeerHandler p, String endpeerid) {
+	public synchronized void addJoinedPeer(PeerController p, String endpeerid) {
 		this.joinedPeers.put(endpeerid, p);
 	}
 
@@ -209,7 +209,7 @@ public class PeerAdmin {
 		return this.joinedThreads;
 	}
 
-	public PeerHandler getPeerHandler(String peerid) {
+	public PeerController getPeerHandler(String peerid) {
 		return this.joinedPeers.get(peerid);
 	}
 
