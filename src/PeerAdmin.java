@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Random;
 import java.util.HashSet;
 
 
@@ -34,6 +35,8 @@ public class PeerAdmin {
 	private volatile HashMap<String, Integer> downloadRate;
 	private Thread serverThread;
 	private volatile Boolean iamDone;
+
+	private Random rand = new Random();
 
 	public PeerAdmin(String peerID) {
 		this.peerID = peerID;
@@ -214,9 +217,14 @@ public class PeerAdmin {
 		return this.piecesAvailability.get(pid);
 	}
 
-	public synchronized boolean checkIfInterested(String endpeerid) {
+	public synchronized boolean checkIfInterested(String endpeerid, int index) {
 		BitSet end = this.getAvailabilityOf(endpeerid);
 		BitSet mine = this.getAvailabilityOf(this.peerID);
+		if(index != -1 && index < this.pieceCount){
+			if (end.get(index) && !mine.get(index)) {
+				return true;
+			}
+		}
 		for (int i = 0; i < end.size() && i < this.pieceCount; i++) {
 			if (end.get(i) == true && mine.get(i) == false) {
 				return true;
@@ -229,9 +237,23 @@ public class PeerAdmin {
 		this.requestedInfo[id] = peerID;
 	}
 
-	public synchronized int checkForRequested(String endpeerid) {
+	public synchronized int checkForRequested(String endpeerid, int index) {
 		BitSet end = this.getAvailabilityOf(endpeerid);
 		BitSet mine = this.getAvailabilityOf(this.peerID);
+		if(index != -1 && index < this.pieceCount){
+			if (end.get(index) && !mine.get(index) && this.requestedInfo[index] == null) {
+				setRequestedInfo(index, endpeerid);
+				return index;
+			}
+		}
+		for (int i = 0; i < 10; i++) {
+			int randomIndex = rand.nextInt(this.pieceCount);
+
+			if (end.get(randomIndex) && !mine.get(randomIndex) && this.requestedInfo[randomIndex] == null) {
+				setRequestedInfo(randomIndex, endpeerid);
+				return randomIndex;
+			}
+		}
 		for (int i = 0; i < end.size() && i < this.pieceCount; i++) {
 			if (end.get(i) == true && mine.get(i) == false && this.requestedInfo[i] == null) {
 				setRequestedInfo(i, endpeerid);

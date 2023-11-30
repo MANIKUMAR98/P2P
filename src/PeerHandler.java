@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.nio.*;
 import java.util.BitSet;
+
 import java.lang.*;
 import java.util.HashMap;
 import java.util.List;
@@ -148,9 +149,9 @@ public class PeerHandler implements Runnable {
 	private void handleUnchokeMessage() {
 		this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.endPeerID);
 		this.choked = false;
-		int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
+		int requestindex = this.peerAdmin.checkForRequested(this.endPeerID, -1);
 		if (requestindex == -1) {
-			if(!this.peerAdmin.checkIfInterested(this.endPeerID)) {
+			if(!this.peerAdmin.checkIfInterested(this.endPeerID, -1)) {
 				this.messageSender.sendNotInterestedMessage();
 			}
 			else {
@@ -160,7 +161,6 @@ public class PeerHandler implements Runnable {
 			this.peerAdmin.setRequestedInfo(requestindex, this.endPeerID);
 			this.messageSender.sendRequestMessage(requestindex);
 		}
-		this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.endPeerID);
 	}
 
 	private void handleInterestedMessage() {
@@ -178,7 +178,7 @@ public class PeerHandler implements Runnable {
 		if (this.peerAdmin.checkIfAllPeersAreDone()) {
 			this.peerAdmin.cancelChokes();
 		}
-		if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
+		if (this.peerAdmin.checkIfInterested(this.endPeerID, pieceIndex)) {
 			this.messageSender.sendInterestedMessage();
 		} else {
 			this.messageSender.sendNotInterestedMessage();
@@ -189,7 +189,7 @@ public class PeerHandler implements Runnable {
 	private void handleBitFieldMessage(BitSet bset) {
 		this.processBitFieldMessage(bset);
 		if (!this.peerAdmin.hasFile()) {
-			if (this.peerAdmin.checkIfInterested(this.endPeerID)) {
+			if (this.peerAdmin.checkIfInterested(this.endPeerID, -1)) {
 				this.messageSender.sendInterestedMessage();
 			} else {
 				this.messageSender.sendNotInterestedMessage();
@@ -217,12 +217,12 @@ public class PeerHandler implements Runnable {
 		this.peerAdmin.broadcastHave(pieceIndex);
 		if (this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() != this.peerAdmin
 				.getPieceCount()) {
-			int requestindex = this.peerAdmin.checkForRequested(this.endPeerID);
+			int requestindex = this.peerAdmin.checkForRequested(this.endPeerID, pieceIndex);
 			if(!this.choked){
 				if (requestindex != -1) {
 					this.messageSender.sendRequestMessage(requestindex);
 				} else {
-					if(!this.peerAdmin.checkIfInterested(this.endPeerID))
+					if(!this.peerAdmin.checkIfInterested(this.endPeerID, -1))
 						this.messageSender.sendNotInterestedMessage();
 					else
 						this.messageSender.sendInterestedMessage();
