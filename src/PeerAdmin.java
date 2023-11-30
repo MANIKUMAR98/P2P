@@ -113,7 +113,7 @@ public class PeerAdmin {
 					RemotePeerInfo peer = this.peerInfoMap.get(pid);
 					Socket temp = new Socket(peer.peerAddress, peer.peerPort);
 					PeerHandler p = new PeerHandler(temp, this);
-					p.setEndPeerID(pid);
+					p.setPeerControllerId(pid);
 					this.addJoinedPeer(p, pid);
 					Thread t = new Thread(p);
 					this.addJoinedThreads(pid, t);
@@ -173,7 +173,7 @@ public class PeerAdmin {
 	public HashMap<String, Integer> getDownloadRates() {
 		HashMap<String, Integer> rates = new HashMap<>();
 		for (String key : this.joinedPeers.keySet()) {
-			rates.put(key, this.joinedPeers.get(key).getDownloadRate());
+			rates.put(key, this.joinedPeers.get(key).getChunkDownloadRateRate());
 		}
 		return rates;
 	}

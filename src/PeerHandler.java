@@ -13,79 +13,79 @@ import java.util.HashMap;
 import java.util.List;
 
 public class PeerHandler implements Runnable {
-	private Socket listener;
-	private PeerAdmin peerAdmin;
+	private Socket communicationChannel;
+	private PeerAdmin coordinator;
 
 	public boolean choked = true;
-	private String endPeerID;
-	private boolean connectionEstablished = false;
-	private boolean initializer = false;
-	private HandshakeMessage hsm;
-	private volatile int downloadRate = 0;
-	private volatile ObjectOutputStream out;
-	private volatile ObjectInputStream in;
+	private String peerControllerId;
+	private boolean  channelEstablished = false;
+	private boolean  intialized = false;
+	private HandshakeMessage estMessage;
+	private volatile int chunkDownloadRate = 0;
+	private volatile ObjectOutputStream out_stream;
+	private volatile ObjectInputStream input_stream;
 
 
 	public MessageSender messageSender;
 
 
-	public PeerHandler(Socket listener, PeerAdmin admin) {
-		this.listener = listener;
-		this.peerAdmin = admin;
+	public PeerHandler(Socket communicationChannel, PeerAdmin coordinator) {
+		this.communicationChannel = communicationChannel;
+		this.coordinator = coordinator;
 		this.messageSender = new MessageSender(this);
-		initStreams();
-		this.hsm = new HandshakeMessage(this.peerAdmin.getPeerID());
+		initializeIOStreams();
+		this.estMessage = new HandshakeMessage(this.coordinator.getPeerID());
 
 	}
 
-	public PeerAdmin getPeerAdmin() {
-		return this.peerAdmin;
+	public PeerAdmin getCoordinator() {
+		return this.coordinator;
 	}
 
-	public void initStreams() {
+	public void initializeIOStreams() {
 		try {
-			this.out = new ObjectOutputStream(this.listener.getOutputStream());
-			this.out.flush();
-			this.in = new ObjectInputStream(this.listener.getInputStream());
+			this.out_stream = new ObjectOutputStream(this.communicationChannel.getOutputStream());
+			this.out_stream.flush();
+			this.input_stream = new ObjectInputStream(this.communicationChannel.getInputStream());
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public synchronized Socket getListener() {
-		return this.listener;
+	public synchronized Socket getCommunicationChannel() {
+		return this.communicationChannel;
 	}
 
-	public void setEndPeerID(String pid) {
-		this.endPeerID = pid;
-		this.initializer = true;
+	public void setPeerControllerId(String pid) {
+		this.peerControllerId = pid;
+		this.intialized = true;
 	}
 
 	public void run() {
 		try {
-			byte[] msg = this.hsm.buildHandShakeMessage();
-			this.out.write(msg);
-			this.out.flush();
-			while (1 != 2) {
-				if (!this.connectionEstablished) {
-					byte[] response = new byte[32];
-					this.in.readFully(response);
-					this.processHandShakeMessage(response);
-					if (this.peerAdmin.hasFile() || this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() > 0) {
+			byte[] msg = this.estMessage.buildHandShakeMessage();
+			this.out_stream.write(msg);
+			this.out_stream.flush();
+			while (true) {
+				if (!this.channelEstablished) {
+					byte[] receivedData = new byte[32];
+					this.input_stream.readFully(receivedData);
+					this.processHandShakeMessage(receivedData);
+					if (this.coordinator.hasFile() || this.coordinator.getAvailabilityOf(this.coordinator.getPeerID()).cardinality() > 0) {
 						this.messageSender.sendBitField();
 					}
 				}
 				else {
-					while (this.in.available() < 4) {
+					while (this.input_stream.available() < 4) {
 					}
-					int respLen = this.in.readInt();
-					byte[] response = new byte[respLen];
-					this.in.readFully(response);
-					char messageType = (char) response[0];
-					ActualMessage am = new ActualMessage();
-					am.readActualMessage(respLen, response);
-					processMessageType(Constants.MessageType.fromCode(messageType), am);
+					int payloadLength = this.input_stream.readInt();
+					byte[] response = new byte[payloadLength];
+					this.input_stream.readFully(response);
+					char msgTypeValue = (char) response[0];
+					ActualMessage msgObj = new ActualMessage();
+					msgObj.readActualMessage(payloadLength, response);
+					processMessageType(Constants.MessageType.fromCode(msgTypeValue), msgObj);
 
 				}
 			}
@@ -94,8 +94,8 @@ public class PeerHandler implements Runnable {
 			System.out.println("Socket exception");
 			e.printStackTrace();
 			try {
-				this.peerAdmin.resetRequested(this.endPeerID);
-				this.peerAdmin.getAvailabilityOf(this.endPeerID).set(0, this.peerAdmin.getPieceCount());
+				this.coordinator.resetRequested(this.peerControllerId);
+				this.coordinator.getAvailabilityOf(this.peerControllerId).set(0, this.coordinator.getPieceCount());
 
 			}
 			catch (Exception err){
@@ -142,54 +142,54 @@ public class PeerHandler implements Runnable {
 
 	private void handleChokeMessage() {
 		this.choked = true;
-		this.peerAdmin.resetRequested(this.endPeerID);
-		this.peerAdmin.getClientLogger().storeChokingNeighborLog(this.endPeerID);
+		this.coordinator.resetRequested(this.peerControllerId);
+		this.coordinator.getClientLogger().storeChokingNeighborLog(this.peerControllerId);
 	}
 
 	private void handleUnchokeMessage() {
-		this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.endPeerID);
+		this.coordinator.getClientLogger().storeUnchokedNeighborLog(this.peerControllerId);
 		this.choked = false;
-		int requestindex = this.peerAdmin.checkForRequested(this.endPeerID, -1);
-		if (requestindex == -1) {
-			if(!this.peerAdmin.checkIfInterested(this.endPeerID, -1)) {
+		int chunkIndex = this.coordinator.checkForRequested(this.peerControllerId, -1);
+		if (chunkIndex == -1) {
+			if(!this.coordinator.checkIfInterested(this.peerControllerId, -1)) {
 				this.messageSender.sendNotInterestedMessage();
 			}
 			else {
 				this.messageSender.sendInterestedMessage();
 			}
 		} else {
-			this.peerAdmin.setRequestedInfo(requestindex, this.endPeerID);
-			this.messageSender.sendRequestMessage(requestindex);
+			this.coordinator.setRequestedInfo(chunkIndex, this.peerControllerId);
+			this.messageSender.sendRequestMessage(chunkIndex);
 		}
 	}
 
 	private void handleInterestedMessage() {
-		this.peerAdmin.addToInterestedList(this.endPeerID);
-		this.peerAdmin.getClientLogger().storeInterestedLog(this.endPeerID);
+		this.coordinator.addToInterestedList(this.peerControllerId);
+		this.coordinator.getClientLogger().storeInterestedLog(this.peerControllerId);
 	}
 
 	private void handleNotInterestedMessage() {
-		this.peerAdmin.removeFromInterestedList(this.endPeerID);
-		this.peerAdmin.getClientLogger().storeNotInterestedLog(this.endPeerID);
+		this.coordinator.removeFromInterestedList(this.peerControllerId);
+		this.coordinator.getClientLogger().storeNotInterestedLog(this.peerControllerId);
 	}
 
 	private void handleHaveMessage(int pieceIndex) {
-		this.peerAdmin.updatePieceAvailability(this.endPeerID, pieceIndex);
-		if (this.peerAdmin.checkIfAllPeersAreDone()) {
-			this.peerAdmin.cancelChokes();
+		this.coordinator.updatePieceAvailability(this.peerControllerId, pieceIndex);
+		if (this.coordinator.checkIfAllPeersAreDone()) {
+			this.coordinator.cancelChokes();
 		}
-		if (this.peerAdmin.checkIfInterested(this.endPeerID, pieceIndex)) {
+		if (this.coordinator.checkIfInterested(this.peerControllerId, pieceIndex)) {
 			this.messageSender.sendInterestedMessage();
 		} else {
 			this.messageSender.sendNotInterestedMessage();
 		}
-		this.peerAdmin.getClientLogger().storeHaveLog(this.endPeerID, pieceIndex);
+		this.coordinator.getClientLogger().storeHaveLog(this.peerControllerId, pieceIndex);
 	}
 
 	private void handleBitFieldMessage(BitSet bset) {
 		this.processBitFieldMessage(bset);
-		if (!this.peerAdmin.hasFile()) {
-			if (this.peerAdmin.checkIfInterested(this.endPeerID, -1)) {
+		if (!this.coordinator.hasFile()) {
+			if (this.coordinator.checkIfInterested(this.peerControllerId, -1)) {
 				this.messageSender.sendInterestedMessage();
 			} else {
 				this.messageSender.sendNotInterestedMessage();
@@ -197,44 +197,44 @@ public class PeerHandler implements Runnable {
 		}
 	}
 
-	private void handleRequestMessage(ActualMessage am) {
-		if (this.peerAdmin.getUnchokedList().contains(this.endPeerID)
-				|| (this.peerAdmin.getOptimisticUnchokedPeer() != null && this.peerAdmin.getOptimisticUnchokedPeer().compareTo(this.endPeerID) == 0)) {
-			int pieceIndex = am.getPieceIndexFromPayload();
-			this.messageSender.sendPieceMessage(pieceIndex, this.peerAdmin.readFromFile(pieceIndex));
+	private void handleRequestMessage(ActualMessage msg) {
+		if (this.coordinator.getUnchokedList().contains(this.peerControllerId)
+				|| (this.coordinator.getOptimisticUnchokedPeer() != null && this.coordinator.getOptimisticUnchokedPeer().compareTo(this.peerControllerId) == 0)) {
+			int chunkIndex = msg.getPieceIndexFromPayload();
+			this.messageSender.sendPieceMessage(chunkIndex, this.coordinator.readFromFile(chunkIndex));
 		}
 	}
 
-	private void handlePieceMessage(ActualMessage am) {
-		int pieceIndex = am.getPieceIndexFromPayload();
-		byte[] piece = am.getPieceFromPayload();
-		this.peerAdmin.writeToFile(piece, pieceIndex);
-		this.peerAdmin.updatePieceAvailability(this.peerAdmin.getPeerID(), pieceIndex);
-		this.downloadRate++;
-		Boolean alldone = this.peerAdmin.checkIfAllPeersAreDone();
-		this.peerAdmin.getClientLogger().storeDownloadedPieceLog(this.endPeerID, pieceIndex, this.peerAdmin.getCompletedPieceCount());
-		this.peerAdmin.setRequestedInfo(pieceIndex, null);
-		this.peerAdmin.broadcastHave(pieceIndex);
-		if (this.peerAdmin.getAvailabilityOf(this.peerAdmin.getPeerID()).cardinality() != this.peerAdmin
+	private void handlePieceMessage(ActualMessage msg) {
+		int chunkIndex = msg.getPieceIndexFromPayload();
+		byte[] chunk = msg.getPieceFromPayload();
+		this.coordinator.writeToFile(chunk, chunkIndex);
+		this.coordinator.updatePieceAvailability(this.coordinator.getPeerID(), chunkIndex);
+		this.chunkDownloadRate++;
+		Boolean allPeersAreDone = this.coordinator.checkIfAllPeersAreDone();
+		this.coordinator.getClientLogger().storeDownloadedPieceLog(this.peerControllerId, chunkIndex, this.coordinator.getCompletedPieceCount());
+		this.coordinator.setRequestedInfo(chunkIndex, null);
+		this.coordinator.broadcastHave(chunkIndex);
+		if (this.coordinator.getAvailabilityOf(this.coordinator.getPeerID()).cardinality() != this.coordinator
 				.getPieceCount()) {
-			int requestindex = this.peerAdmin.checkForRequested(this.endPeerID, pieceIndex);
+			int nextIndex = this.coordinator.checkForRequested(this.peerControllerId, chunkIndex);
 			if(!this.choked){
-				if (requestindex != -1) {
-					this.messageSender.sendRequestMessage(requestindex);
+				if (nextIndex != -1) {
+					this.messageSender.sendRequestMessage(nextIndex);
 				} else {
-					if(!this.peerAdmin.checkIfInterested(this.endPeerID, -1))
+					if(!this.coordinator.checkIfInterested(this.peerControllerId, -1))
 						this.messageSender.sendNotInterestedMessage();
 					else
 						this.messageSender.sendInterestedMessage();
 				}}
 			else{
-				if(requestindex != -1)
-					this.peerAdmin.setRequestedInfo(requestindex, null);
+				if(nextIndex != -1)
+					this.coordinator.setRequestedInfo(nextIndex, null);
 			}
 		} else {
-			this.peerAdmin.getClientLogger().storeTheDownloadCompleteLog();
-			if (alldone) {
-				this.peerAdmin.cancelChokes();
+			this.coordinator.getClientLogger().storeTheDownloadCompleteLog();
+			if (allPeersAreDone) {
+				this.coordinator.cancelChokes();
 			}
 			else{
 				this.messageSender.sendNotInterestedMessage();}
@@ -242,8 +242,8 @@ public class PeerHandler implements Runnable {
 	}
 	public synchronized void send(byte[] obj) {
 		try {
-			this.out.write(obj);
-			this.out.flush();
+			this.out_stream.write(obj);
+			this.out_stream.flush();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -251,16 +251,16 @@ public class PeerHandler implements Runnable {
 	}
 	public void processHandShakeMessage(byte[] message) {
 		try {
-			this.hsm.readHandShakeMessage(message);
-			this.endPeerID = this.hsm.getPeerID();
-			this.peerAdmin.addJoinedPeer(this, this.endPeerID);
-			this.peerAdmin.addJoinedThreads(this.endPeerID, Thread.currentThread());
-			this.connectionEstablished = true;
-			if (this.initializer) {
-				this.peerAdmin.getClientLogger().tcpConnectionLogSenderGenerator(this.endPeerID);
+			this.estMessage.readHandShakeMessage(message);
+			this.peerControllerId = this.estMessage.getPeerID();
+			this.coordinator.addJoinedPeer(this, this.peerControllerId);
+			this.coordinator.addJoinedThreads(this.peerControllerId, Thread.currentThread());
+			this.channelEstablished = true;
+			if (this.intialized) {
+				this.coordinator.getClientLogger().tcpConnectionLogSenderGenerator(this.peerControllerId);
 			}
 			else {
-				this.peerAdmin.getClientLogger().tcpConnectionLogReceiverGenerator(this.endPeerID);
+				this.coordinator.getClientLogger().tcpConnectionLogReceiverGenerator(this.peerControllerId);
 			}
 		}
 		catch (Exception e) {
@@ -269,15 +269,15 @@ public class PeerHandler implements Runnable {
 	}
 
 	public void processBitFieldMessage(BitSet b) {
-		this.peerAdmin.updateBitset(this.endPeerID, b);
+		this.coordinator.updateBitset(this.peerControllerId, b);
 	}
 
-	public int getDownloadRate() {
-		return this.downloadRate;
+	public int getChunkDownloadRateRate() {
+		return this.chunkDownloadRate;
 	}
 
 	public void resetDownloadRate() {
-		this.downloadRate = 0;
+		this.chunkDownloadRate = 0;
 	}
 
 }

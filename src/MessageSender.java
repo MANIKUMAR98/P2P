@@ -84,7 +84,7 @@ public class MessageSender {
 
     public void sendBitField() {
         try {
-            BitSet myAvailability = this.peerHandler.getPeerAdmin().getAvailabilityOf(this.peerHandler.getPeerAdmin().getPeerID());
+            BitSet myAvailability = this.peerHandler.getCoordinator().getAvailabilityOf(this.peerHandler.getCoordinator().getPeerID());
             ActualMessage am = new ActualMessage('5', myAvailability.toByteArray());
             this.peerHandler.send(am.buildActualMessage());
         } catch (Exception e) {
