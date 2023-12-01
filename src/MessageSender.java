@@ -84,7 +84,7 @@ public class MessageSender {
 
     public void issueBitField() {
         try {
-            BitSet coordinatorBitField = this.peerController.getCoordinator().getAvailabilityOf(this.peerController.getCoordinator().getPeerID());
+            BitSet coordinatorBitField = this.peerController.getCoordinator().getChunkAvailabilityOf(this.peerController.getCoordinator().getLocalPeerID());
             ActualMessage msgObj = new ActualMessage('5', coordinatorBitField.toByteArray());
             this.peerController.transmitMessage(msgObj.buildActualMessage());
         } catch (Exception e) {

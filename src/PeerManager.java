@@ -52,7 +52,7 @@ public class PeerManager {
 		this.localFileDownloadComplete = false;
 		this.unChokedPeerList = new HashSet<>();
 		this.interestedPeerList = new HashSet<>();
-		this.initPeer();
+		this.initializeLocalPeer();
 		this.chokeController = new ChokeController(this);
 		this.chunkDownloadRateInfo = new HashMap<>();
 		this.optimisticUnChokeController = new OptimisticUnchokeHandler(this);
@@ -61,37 +61,37 @@ public class PeerManager {
 		this.optimisticUnChokeController.startJob();
 	}
 
-	public void initPeer() {
+	public void initializeLocalPeer() {
 		try {
 			this.commonConfig.InitilizeCommonConfiguration();;
 			this.peerConfigurationInfo.loadConfigFile();
-			this.chunkCount = this.calcPieceCount();
+			this.chunkCount = this.calcChunkCount();
 			this.requestedInfo = new String[this.chunkCount];
 			this.localConfiguration = this.peerConfigurationInfo.getPeerConfig(this.localPeerID);
 			this.allPeerDetailsMap = this.peerConfigurationInfo.getPeerInfoMap();
 			this.allPeerList = this.peerConfigurationInfo.getPeerList();
-			String filepath = "peer_" + this.localPeerID;
-			File file = new File(filepath);
-			file.mkdir();
-			String filename = filepath + "/" + getFileName();
-			file = new File(filename);
-			if (!hasFile()) {
-				file.createNewFile();
+			String fileLocation = "peer_" + this.localPeerID;
+			File fileHandler = new File(fileLocation);
+			fileHandler.mkdir();
+			String filename = fileLocation + "/" + getSourceFileName();
+			fileHandler = new File(filename);
+			if (!hasSourceFile()) {
+				fileHandler.createNewFile();
 			}
-			this.filePointer = new RandomAccessFile(file, "rw");
-			if (!hasFile()) {
-				this.filePointer.setLength(this.getFileSize());
+			this.filePointer = new RandomAccessFile(fileHandler, "rw");
+			if (!hasSourceFile()) {
+				this.filePointer.setLength(this.getSourceFileSize());
 			}
-			this.initializePieceAvailability();
-			this.startServer();
-			this.createNeighbourConnections();
+			this.setChunkAvailabilityMap();
+			this.startLocalCoordinator();
+			this.connectToOtherPeers();
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public void startServer() {
+	public void startLocalCoordinator() {
 		try {
 			this.localChannel = new ServerSocket(this.localConfiguration.peerPort);
 			this.localServer = new PeerServer(this.localPeerID, this.localChannel, this);
@@ -103,22 +103,22 @@ public class PeerManager {
 		}
 	}
 
-	public void createNeighbourConnections() {
+	public void connectToOtherPeers() {
 		try {
 			Thread.sleep(5000);
-			for (String pid : this.allPeerList) {
-				if (pid.equals(this.localPeerID)) {
+			for (String peerControllerID : this.allPeerList) {
+				if (peerControllerID.equals(this.localPeerID)) {
 					break;
 				}
 				else {
-					RemotePeerInfo peer = this.allPeerDetailsMap.get(pid);
+					RemotePeerInfo peer = this.allPeerDetailsMap.get(peerControllerID);
 					Socket temp = new Socket(peer.peerAddress, peer.peerPort);
-					PeerController p = new PeerController(temp, this);
-					p.setPeerControllerId(pid);
-					this.addJoinedPeer(p, pid);
-					Thread t = new Thread(p);
-					this.addJoinedThreads(pid, t);
-					t.start();
+					PeerController peerControllerObj = new PeerController(temp, this);
+					peerControllerObj.setPeerControllerId(peerControllerID);
+					this.addConnectedPeer(peerControllerObj, peerControllerID);
+					Thread peerControllerThread = new Thread(peerControllerObj);
+					this.addJoinedThreads(peerControllerID, peerControllerThread);
+					peerControllerThread.start();
 				}
 			}
 		}
@@ -127,42 +127,42 @@ public class PeerManager {
 		}
 	}
 
-	public void initializePieceAvailability() {
+	public void setChunkAvailabilityMap() {
 		for (String pid : this.allPeerDetailsMap.keySet()) {
-			BitSet availability = new BitSet(this.chunkCount);
+			BitSet chunkAvailabliltyMap = new BitSet(this.chunkCount);
 			if (this.allPeerDetailsMap.get(pid).containsFile == 1) {
-				availability.set(0, this.chunkCount);
-				this.chunkAvailabilityMap.put(pid, availability);
+				chunkAvailabliltyMap.set(0, this.chunkCount);
+				this.chunkAvailabilityMap.put(pid, chunkAvailabliltyMap);
 			}
 			else {
-				availability.clear();
-				this.chunkAvailabilityMap.put(pid, availability);
+				chunkAvailabliltyMap.clear();
+				this.chunkAvailabilityMap.put(pid, chunkAvailabliltyMap);
 			}
 		}
 	}
 
-	public synchronized void writeToFile(byte[] data, int pieceindex) {
+	public synchronized void outputToFileSync(byte[] chunk, int chunkIndex) {
 		try {
-			int position = this.getPieceSize() * pieceindex;
-			this.filePointer.seek(position);
-			this.filePointer.write(data);
+			int pointer = this.getChunkSize() * chunkIndex;
+			this.filePointer.seek(pointer);
+			this.filePointer.write(chunk);
 		}
 		catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
 
-	public synchronized byte[] readFromFile(int pieceindex) {
+	public synchronized byte[] inputFromFileSync(int chunkIndex) {
 		try {
-			int position = this.getPieceSize() * pieceindex;
-			int size = this.getPieceSize();
-			if (pieceindex == getPieceCount() - 1) {
-				size = this.getFileSize() % this.getPieceSize();
+			int pointer = this.getChunkSize() * chunkIndex;
+			int length = this.getChunkSize();
+			if (chunkIndex == getChunkCount() - 1) {
+				length = this.getChunkSize() % this.getChunkSize();
 			}
-			this.filePointer.seek(position);
-			byte[] data = new byte[size];
-			this.filePointer.read(data);
-			return data;
+			this.filePointer.seek(pointer);
+			byte[] chunk = new byte[length];
+			this.filePointer.read(chunk);
+			return chunk;
 		}
 		catch (Exception e) {
 			e.printStackTrace();
@@ -171,7 +171,7 @@ public class PeerManager {
 		return new byte[0];
 	}
 
-	public HashMap<String, Integer> getDownloadRates() {
+	public HashMap<String, Integer> getChunkDownloadRates() {
 		HashMap<String, Integer> rates = new HashMap<>();
 		for (String key : this.connectedPeers.keySet()) {
 			rates.put(key, this.connectedPeers.get(key).getChunkDownloadRateRate());
@@ -179,100 +179,101 @@ public class PeerManager {
 		return rates;
 	}
 
-	public synchronized void broadcastHave(int pieceIndex) {
-		for (String key : this.connectedPeers.keySet()) {
-			this.connectedPeers.get(key).messageSender.issueHaveMessage(pieceIndex);
+	public synchronized void sendHave(int chunkIndex) {
+		for (String peerControllerID : this.connectedPeers.keySet()) {
+			this.connectedPeers.get(peerControllerID).messageSender.issueHaveMessage(chunkIndex);
 		}
 	}
 
-	public synchronized void updatePieceAvailability(String peerID, int index) {
-		this.chunkAvailabilityMap.get(peerID).set(index);
+	public synchronized void updateChunkAvailability(String peerControllerID, int chunkIndex) {
+		this.chunkAvailabilityMap.get(peerControllerID).set(chunkIndex);
 	}
 
-	public synchronized void updateDownloadRate(String endpeerid) {
+	public synchronized void updateChunkDownloadRate(String endpeerid) {
 		this.chunkDownloadRateInfo.put(endpeerid, this.chunkDownloadRateInfo.get(endpeerid) + 1);
 	}
 
-	public synchronized void updateBitset(String peerID, BitSet b) {
-		this.chunkAvailabilityMap.remove(peerID);
-		this.chunkAvailabilityMap.put(peerID, b);
+	public synchronized void updateChunkBitsetAvailability(String peerControllerID, BitSet chunkIndex) {
+		this.chunkAvailabilityMap.remove(peerControllerID);
+		this.chunkAvailabilityMap.put(peerControllerID, chunkIndex);
 	}
 
-	public synchronized void addJoinedPeer(PeerController p, String endpeerid) {
-		this.connectedPeers.put(endpeerid, p);
+	public synchronized void addConnectedPeer(PeerController peerControllerObj, String peerControllerID) {
+		this.connectedPeers.put(peerControllerID, peerControllerObj);
 	}
 
 	public synchronized void addJoinedThreads(String epeerid, Thread th) {
 		this.connectedPeerThreads.put(epeerid, th);
 	}
 
-	public synchronized HashMap<String, Thread> getJoinedThreads() {
+	public synchronized HashMap<String, Thread> getConnectedPeerThreads() {
 		return this.connectedPeerThreads;
 	}
 
-	public PeerController getPeerHandler(String peerid) {
+	public PeerController getPeerController(String peerid) {
 		return this.connectedPeers.get(peerid);
 	}
 
-	public BitSet getAvailabilityOf(String pid) {
+	public BitSet getChunkAvailabilityOf(String pid) {
 		return this.chunkAvailabilityMap.get(pid);
 	}
 
-	public synchronized boolean checkIfInterested(String endpeerid, int index) {
-		BitSet end = this.getAvailabilityOf(endpeerid);
-		BitSet mine = this.getAvailabilityOf(this.localPeerID);
-		if(index != -1 && index < this.chunkCount){
-			if (end.get(index) && !mine.get(index)) {
+	public synchronized boolean checkIfInterested(String peerControllerID, int chunkIndex) {
+		BitSet peerChunkAvailabilty = this.getChunkAvailabilityOf(peerControllerID);
+		BitSet mine = this.getChunkAvailabilityOf(this.localPeerID);
+		if(chunkIndex != -1 && chunkIndex < this.chunkCount){
+			if (peerChunkAvailabilty.get(chunkIndex) && !mine.get(chunkIndex)) {
 				return true;
 			}
 		}
-		for (int i = 0; i < end.size() && i < this.chunkCount; i++) {
-			if (end.get(i) == true && mine.get(i) == false) {
+		for (int i = 0; i < peerChunkAvailabilty.size() && i < this.chunkCount; i++) {
+			if (peerChunkAvailabilty.get(i) == true && mine.get(i) == false) {
 				return true;
 			}
+
 		}
 		return false;
 	}
 
-	public synchronized void setRequestedInfo(int id, String peerID) {
-		this.requestedInfo[id] = peerID;
+	public synchronized void setChunkRequestedInfo(int chunkIndex, String peerControllerID) {
+		this.requestedInfo[chunkIndex] = peerControllerID;
 	}
 
-	public synchronized int checkForRequested(String endpeerid, int index) {
-		BitSet end = this.getAvailabilityOf(endpeerid);
-		BitSet mine = this.getAvailabilityOf(this.localPeerID);
-		if(index != -1 && index < this.chunkCount){
-			if (end.get(index) && !mine.get(index) && this.requestedInfo[index] == null) {
-				setRequestedInfo(index, endpeerid);
-				return index;
+	public synchronized int checkChunksRequested(String peerControllerID, int chunkIndex) {
+		BitSet end = this.getChunkAvailabilityOf(peerControllerID);
+		BitSet mine = this.getChunkAvailabilityOf(this.localPeerID);
+		if(chunkIndex != -1 && chunkIndex < this.chunkCount){
+			if (end.get(chunkIndex) && !mine.get(chunkIndex) && this.requestedInfo[chunkIndex] == null) {
+				setChunkRequestedInfo(chunkIndex, peerControllerID);
+				return chunkIndex;
 			}
 		}
 		for (int i = 0; i < 10; i++) {
 			int randomIndex = randObj.nextInt(this.chunkCount);
 
 			if (end.get(randomIndex) && !mine.get(randomIndex) && this.requestedInfo[randomIndex] == null) {
-				setRequestedInfo(randomIndex, endpeerid);
+				setChunkRequestedInfo(randomIndex, peerControllerID);
 				return randomIndex;
 			}
 		}
 		for (int i = 0; i < end.size() && i < this.chunkCount; i++) {
 			if (end.get(i) == true && mine.get(i) == false && this.requestedInfo[i] == null) {
-				setRequestedInfo(i, endpeerid);
+				setChunkRequestedInfo(i, peerControllerID);
 				return i;
 			}
 		}
 		return -1;
 	}
 
-	public synchronized void resetRequested(String endpeerid) {
+	public synchronized void resetRequestedChunkInfo(String endPeerControllerID) {
 		for (int i = 0; i < this.requestedInfo.length; i++) {
-			if (this.requestedInfo[i] != null && this.requestedInfo[i].compareTo(endpeerid) == 0) {
-				setRequestedInfo(i, null);
+			if (this.requestedInfo[i] != null && this.requestedInfo[i].compareTo(endPeerControllerID) == 0) {
+				setChunkRequestedInfo(i, null);
 			}
 		}
 	}
 
-	public String getPeerID() {
+	public String getLocalPeerID() {
 		return this.localPeerID;
 	}
 
@@ -280,118 +281,118 @@ public class PeerManager {
 		return this.clientLogger;
 	}
 
-	public boolean hasFile() {
+	public boolean hasSourceFile() {
 		return this.localConfiguration.containsFile == 1;
 	}
 
-	public int getNoOfPreferredNeighbors() {
+	public int getPreferredNeighborNumber() {
 		return this.commonConfig.numberOfPreferredNeighbors;
 	}
 
-	public int getUnchockingInterval() {
+	public int getUnChokeFrequency() {
 		return this.commonConfig.unchokingInterval;
 	}
 
-	public int getOptimisticUnchockingInterval() {
+	public int getOptimisticUnChokeFrequency() {
 		return this.commonConfig.optimisticUnchokingInterval;
 	}
 
-	public String getFileName() {
+	public String getSourceFileName() {
 		return this.commonConfig.fileName;
 	}
 
-	public int getFileSize() {
+	public int getSourceFileSize() {
 		return this.commonConfig.fileSize;
 	}
 
-	public int getPieceSize() {
+	public int getChunkSize() {
 		return this.commonConfig.pieceSize;
 	}
 
-	public int calcPieceCount() {
-		int len = (getFileSize() / getPieceSize());
-		if (getFileSize() % getPieceSize() != 0) {
+	public int calcChunkCount() {
+		int len = (getSourceFileSize() / getChunkSize());
+		if (getSourceFileSize() % getChunkSize() != 0) {
 			len += 1;
 		}
 		return len;
 	}
 
-	public int getPieceCount() {
+	public int getChunkCount() {
 		return this.chunkCount;
 	}
 
-	public int getCompletedPieceCount() {
+	public int getAvailableChunkCount() {
 		return this.chunkAvailabilityMap.get(this.localPeerID).cardinality();
 	}
 
-	public synchronized void addToInterestedList(String endPeerId) {
+	public synchronized void appendToInterestedList(String endPeerId) {
 		this.interestedPeerList.add(endPeerId);
 	}
 
-	public synchronized void removeFromInterestedList(String endPeerId) {
+	public synchronized void setPeerAsNotInterested(String endPeerId) {
 		if (this.interestedPeerList != null) {
 			this.interestedPeerList.remove(endPeerId);
 		}
 	}
 
-	public synchronized void resetInterestedList() {
+	public synchronized void resetInterestedPeerList() {
 		this.interestedPeerList.clear();
 	}
 
-	public synchronized Set<String> getInterestedList() {
+	public synchronized Set<String> getInterestedPeerList() {
 		return this.interestedPeerList;
 	}
 
-	public synchronized boolean addUnchokedPeer(String peerid) {
+	public synchronized boolean addToUnChokedPeerList(String peerid) {
 		return this.unChokedPeerList.add(peerid);
 	}
 
-	public synchronized Set<String> getUnchokedList() {
+	public synchronized Set<String> getUnChokedPeerList() {
 		return this.unChokedPeerList;
 	}
 
-	public synchronized void resetUnchokedList() {
+	public synchronized void resetUnChokedPeerList() {
 		this.unChokedPeerList.clear();
 	}
 
-	public synchronized void updateUnchokedList(Set<String> newSet) {
-		this.unChokedPeerList = newSet;
+	public synchronized void updateUnChokedPeerList(Set<String> newUnChokedPeerList) {
+		this.unChokedPeerList = newUnChokedPeerList;
 	}
 
-	public synchronized void setOptimisticUnchokdPeer(String peerid) {
-		this.optUnchockedPeer = peerid;
+	public synchronized void setOptimisticUnChokedPeer(String peerControllerID) {
+		this.optUnchockedPeer = peerControllerID;
 	}
 
-	public synchronized String getOptimisticUnchokedPeer() {
+	public synchronized String getOptimisticUnChokedPeer() {
 		return this.optUnchockedPeer;
 	}
 
-	public synchronized boolean checkIfAllPeersAreDone() {
-		for (String peer : this.chunkAvailabilityMap.keySet()) {
-			if (this.chunkAvailabilityMap.get(peer).cardinality() != this.chunkCount) {
+	public synchronized boolean areAllPeersDone() {
+		for (String peerControllerID : this.chunkAvailabilityMap.keySet()) {
+			if (this.chunkAvailabilityMap.get(peerControllerID).cardinality() != this.chunkCount) {
 				return false;
 			}
 		}
 		return true;
 	}
 
-	public synchronized OptimisticUnchokeHandler getoptHandler() {
+	public synchronized OptimisticUnchokeHandler getOptController() {
 		return this.optimisticUnChokeController;
 	}
 
-	public synchronized ChokeController getchHandler() {
+	public synchronized ChokeController getChokeController() {
 		return this.chokeController;
 	}
 
-	public synchronized RandomAccessFile getRefFile() {
+	public synchronized RandomAccessFile getFilePointer() {
 		return this.filePointer;
 	}
 
-	public synchronized ServerSocket getListener() {
+	public synchronized ServerSocket getLocalChannel() {
 		return this.localChannel;
 	}
 
-	public synchronized Thread getServerThread() {
+	public synchronized Thread getLocalServerThread() {
 		return this.localServerThread;
 	}
 
@@ -399,23 +400,23 @@ public class PeerManager {
 		return this.localFileDownloadComplete;
 	}
 
-	public synchronized void closeHandlers() {
-		for (String peer : this.connectedPeerThreads.keySet()) {
-			this.connectedPeerThreads.get(peer).stop();
+	public synchronized void stopAllPeerControllers() {
+		for (String peerControllerID : this.connectedPeerThreads.keySet()) {
+			this.connectedPeerThreads.get(peerControllerID).stop();
 		}
 	}
 
 	public synchronized void cancelChokes() {
 		try {
-			this.getoptHandler().cancelJob();
-			this.getchHandler().cancelJob();
-			this.resetUnchokedList();
-			this.setOptimisticUnchokdPeer(null);
-			this.resetInterestedList();
-			this.getRefFile().close();
+			this.getOptController().cancelJob();
+			this.getChokeController().cancelJob();
+			this.resetUnChokedPeerList();
+			this.setOptimisticUnChokedPeer(null);
+			this.resetInterestedPeerList();
+			this.getFilePointer().close();
 			this.getClientLogger().closeTheClientLogger();
-			this.getListener().close();
-			this.getServerThread().stop();
+			this.getLocalChannel().close();
+			this.getLocalServerThread().stop();
 			this.localFileDownloadComplete = true;
 			this.cleanupHandler.startJob(6);
 		}

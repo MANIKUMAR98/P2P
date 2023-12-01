@@ -26,10 +26,10 @@ public class TerminateHandler implements Runnable {
     public void run() {
         try {
             if(this.peerManager.checkIfDone()) {
-                this.peerManager.closeHandlers();
+                this.peerManager.stopAllPeerControllers();
                 this.cancelJob();
             }
-        } 
+        }
         catch (Exception e) {
             e.printStackTrace();
         }

@@ -15,7 +15,7 @@ public class OptimisticUnchokeHandler implements Runnable {
 
     OptimisticUnchokeHandler(PeerManager peerManager) {
         this.peerManager = peerManager;
-        this.interval = peerManager.getOptimisticUnchockingInterval();
+        this.interval = peerManager.getOptimisticUnChokeFrequency();
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
@@ -25,14 +25,14 @@ public class OptimisticUnchokeHandler implements Runnable {
 
     public void run() {
         try {
-            String optUnchoked = this.peerManager.getOptimisticUnchokedPeer();
-            List<String> interested = new ArrayList<String>(this.peerManager.getInterestedList());
+            String optUnchoked = this.peerManager.getOptimisticUnChokedPeer();
+            List<String> interested = new ArrayList<String>(this.peerManager.getInterestedPeerList());
             if(interested.size() >0)
                 interested.remove(optUnchoked);
             int iLen = interested.size();
             if (iLen > 0) {
                 String nextPeer = interested.get(rand.nextInt(iLen));
-                while (this.peerManager.getUnchokedList().contains(nextPeer)) {
+                while (this.peerManager.getUnChokedPeerList().contains(nextPeer)) {
                     interested.remove(nextPeer);
                     iLen--;
                     if(iLen > 0) {
@@ -43,24 +43,24 @@ public class OptimisticUnchokeHandler implements Runnable {
                         break;
                     }
                 }
-                this.peerManager.setOptimisticUnchokdPeer(nextPeer);
+                this.peerManager.setOptimisticUnChokedPeer(nextPeer);
                 if(nextPeer != null) {
-                    PeerController nextHandler = this.peerManager.getPeerHandler(nextPeer);
+                    PeerController nextHandler = this.peerManager.getPeerController(nextPeer);
                     nextHandler.messageSender.issueUnChokeMessage();
-                    this.peerManager.getClientLogger().storeUnchokedNeighborLog(this.peerManager.getOptimisticUnchokedPeer());
+                    this.peerManager.getClientLogger().storeUnchokedNeighborLog(this.peerManager.getOptimisticUnChokedPeer());
                 }
-                if (optUnchoked != null && !this.peerManager.getUnchokedList().contains(optUnchoked)) {
-                    this.peerManager.getPeerHandler(optUnchoked).messageSender.issueChokeMessage();
+                if (optUnchoked != null && !this.peerManager.getUnChokedPeerList().contains(optUnchoked)) {
+                    this.peerManager.getPeerController(optUnchoked).messageSender.issueChokeMessage();
                 }
             }
             else {
-                String currentOpt = this.peerManager.getOptimisticUnchokedPeer();
-                this.peerManager.setOptimisticUnchokdPeer(null);
-                if (currentOpt != null && !this.peerManager.getUnchokedList().contains(currentOpt)) {
-                    PeerController nextHandler = this.peerManager.getPeerHandler(currentOpt);
+                String currentOpt = this.peerManager.getOptimisticUnChokedPeer();
+                this.peerManager.setOptimisticUnChokedPeer(null);
+                if (currentOpt != null && !this.peerManager.getUnChokedPeerList().contains(currentOpt)) {
+                    PeerController nextHandler = this.peerManager.getPeerController(currentOpt);
                     nextHandler.messageSender.issueChokeMessage();
                 }
-                if(this.peerManager.checkIfAllPeersAreDone()) {
+                if(this.peerManager.areAllPeersDone()) {
                     this.peerManager.cancelChokes();
                 }
             }

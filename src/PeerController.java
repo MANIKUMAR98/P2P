@@ -28,7 +28,7 @@ public class PeerController implements Runnable {
 		this.coordinator = coordinator;
 		this.messageSender = new MessageSender(this);
 		initializeIOStreams();
-		this.handshakeMessage = new HandshakeMessage(this.coordinator.getPeerID());
+		this.handshakeMessage = new HandshakeMessage(this.coordinator.getLocalPeerID());
 
 	}
 
@@ -66,7 +66,7 @@ public class PeerController implements Runnable {
 					byte[] receivedData = new byte[32];
 					this.input_stream.readFully(receivedData);
 					this.processHandShakeMessage(receivedData);
-					if (this.coordinator.hasFile() || this.coordinator.getAvailabilityOf(this.coordinator.getPeerID()).cardinality() > 0) {
+					if (this.coordinator.hasSourceFile() || this.coordinator.getChunkAvailabilityOf(this.coordinator.getLocalPeerID()).cardinality() > 0) {
 						this.messageSender.issueBitField();
 					}
 				}
@@ -88,8 +88,8 @@ public class PeerController implements Runnable {
 			System.out.println("Socket exception");
 			e.printStackTrace();
 			try {
-				this.coordinator.resetRequested(this.peerControllerId);
-				this.coordinator.getAvailabilityOf(this.peerControllerId).set(0, this.coordinator.getPieceCount());
+				this.coordinator.resetRequestedChunkInfo(this.peerControllerId);
+				this.coordinator.getChunkAvailabilityOf(this.peerControllerId).set(0, this.coordinator.getChunkCount());
 
 			}
 			catch (Exception err){
@@ -136,14 +136,14 @@ public class PeerController implements Runnable {
 
 	private void handleChokeMessage() {
 		this.choked = true;
-		this.coordinator.resetRequested(this.peerControllerId);
+		this.coordinator.resetRequestedChunkInfo(this.peerControllerId);
 		this.coordinator.getClientLogger().storeChokingNeighborLog(this.peerControllerId);
 	}
 
 	private void handleUnchokeMessage() {
 		this.coordinator.getClientLogger().storeUnchokedNeighborLog(this.peerControllerId);
 		this.choked = false;
-		int chunkIndex = this.coordinator.checkForRequested(this.peerControllerId, -1);
+		int chunkIndex = this.coordinator.checkChunksRequested(this.peerControllerId, -1);
 		if (chunkIndex == -1) {
 			if(!this.coordinator.checkIfInterested(this.peerControllerId, -1)) {
 				this.messageSender.issueNotInterestedMessage();
@@ -152,24 +152,24 @@ public class PeerController implements Runnable {
 				this.messageSender.issueInterestedMessage();
 			}
 		} else {
-			this.coordinator.setRequestedInfo(chunkIndex, this.peerControllerId);
+			this.coordinator.setChunkRequestedInfo(chunkIndex, this.peerControllerId);
 			this.messageSender.issueRequestMessage(chunkIndex);
 		}
 	}
 
 	private void handleInterestedMessage() {
-		this.coordinator.addToInterestedList(this.peerControllerId);
+		this.coordinator.appendToInterestedList(this.peerControllerId);
 		this.coordinator.getClientLogger().storeInterestedLog(this.peerControllerId);
 	}
 
 	private void handleNotInterestedMessage() {
-		this.coordinator.removeFromInterestedList(this.peerControllerId);
+		this.coordinator.setPeerAsNotInterested(this.peerControllerId);
 		this.coordinator.getClientLogger().storeNotInterestedLog(this.peerControllerId);
 	}
 
 	private void handleHaveMessage(int pieceIndex) {
-		this.coordinator.updatePieceAvailability(this.peerControllerId, pieceIndex);
-		if (this.coordinator.checkIfAllPeersAreDone()) {
+		this.coordinator.updateChunkAvailability(this.peerControllerId, pieceIndex);
+		if (this.coordinator.areAllPeersDone()) {
 			this.coordinator.cancelChokes();
 		}
 		if (this.coordinator.checkIfInterested(this.peerControllerId, pieceIndex)) {
@@ -182,7 +182,7 @@ public class PeerController implements Runnable {
 
 	private void handleBitFieldMessage(BitSet bset) {
 		this.processBitFieldMessage(bset);
-		if (!this.coordinator.hasFile()) {
+		if (!this.coordinator.hasSourceFile()) {
 			if (this.coordinator.checkIfInterested(this.peerControllerId, -1)) {
 				this.messageSender.issueInterestedMessage();
 			} else {
@@ -192,26 +192,26 @@ public class PeerController implements Runnable {
 	}
 
 	private void handleRequestMessage(ActualMessage msg) {
-		if (this.coordinator.getUnchokedList().contains(this.peerControllerId)
-				|| (this.coordinator.getOptimisticUnchokedPeer() != null && this.coordinator.getOptimisticUnchokedPeer().compareTo(this.peerControllerId) == 0)) {
+		if (this.coordinator.getUnChokedPeerList().contains(this.peerControllerId)
+				|| (this.coordinator.getOptimisticUnChokedPeer() != null && this.coordinator.getOptimisticUnChokedPeer().compareTo(this.peerControllerId) == 0)) {
 			int chunkIndex = msg.getPieceIndexFromPayload();
-			this.messageSender.transmitPieceMessage(chunkIndex, this.coordinator.readFromFile(chunkIndex));
+			this.messageSender.transmitPieceMessage(chunkIndex, this.coordinator.inputFromFileSync(chunkIndex));
 		}
 	}
 
 	private void handlePieceMessage(ActualMessage msg) {
 		int chunkIndex = msg.getPieceIndexFromPayload();
 		byte[] chunk = msg.getPieceFromPayload();
-		this.coordinator.writeToFile(chunk, chunkIndex);
-		this.coordinator.updatePieceAvailability(this.coordinator.getPeerID(), chunkIndex);
+		this.coordinator.outputToFileSync(chunk, chunkIndex);
+		this.coordinator.updateChunkAvailability(this.coordinator.getLocalPeerID(), chunkIndex);
 		this.chunkDownloadRate++;
-		Boolean allPeersAreDone = this.coordinator.checkIfAllPeersAreDone();
-		this.coordinator.getClientLogger().storeDownloadedPieceLog(this.peerControllerId, chunkIndex, this.coordinator.getCompletedPieceCount());
-		this.coordinator.setRequestedInfo(chunkIndex, null);
-		this.coordinator.broadcastHave(chunkIndex);
-		if (this.coordinator.getAvailabilityOf(this.coordinator.getPeerID()).cardinality() != this.coordinator
-				.getPieceCount()) {
-			int nextIndex = this.coordinator.checkForRequested(this.peerControllerId, chunkIndex);
+		Boolean allPeersAreDone = this.coordinator.areAllPeersDone();
+		this.coordinator.getClientLogger().storeDownloadedPieceLog(this.peerControllerId, chunkIndex, this.coordinator.getAvailableChunkCount());
+		this.coordinator.setChunkRequestedInfo(chunkIndex, null);
+		this.coordinator.sendHave(chunkIndex);
+		if (this.coordinator.getChunkAvailabilityOf(this.coordinator.getLocalPeerID()).cardinality() != this.coordinator
+				.getChunkCount()) {
+			int nextIndex = this.coordinator.checkChunksRequested(this.peerControllerId, chunkIndex);
 			if(!this.choked){
 				if (nextIndex != -1) {
 					this.messageSender.issueRequestMessage(nextIndex);
@@ -223,7 +223,7 @@ public class PeerController implements Runnable {
 				}}
 			else{
 				if(nextIndex != -1)
-					this.coordinator.setRequestedInfo(nextIndex, null);
+					this.coordinator.setChunkRequestedInfo(nextIndex, null);
 			}
 		} else {
 			this.coordinator.getClientLogger().storeTheDownloadCompleteLog();
@@ -247,7 +247,7 @@ public class PeerController implements Runnable {
 		try {
 			this.handshakeMessage.pareseHandshakeMessage(message);
 			this.peerControllerId = this.handshakeMessage.getPeerId();
-			this.coordinator.addJoinedPeer(this, this.peerControllerId);
+			this.coordinator.addConnectedPeer(this, this.peerControllerId);
 			this.coordinator.addJoinedThreads(this.peerControllerId, Thread.currentThread());
 			this.channelEstablished = true;
 			if (this.intialized) {
@@ -263,7 +263,7 @@ public class PeerController implements Runnable {
 	}
 
 	public void processBitFieldMessage(BitSet b) {
-		this.coordinator.updateBitset(this.peerControllerId, b);
+		this.coordinator.updateChunkBitsetAvailability(this.peerControllerId, b);
 	}
 
 	public int getChunkDownloadRateRate() {
