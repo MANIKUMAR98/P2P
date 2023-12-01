@@ -11,15 +11,15 @@ import static java.util.stream.Collectors.toMap;
 public class ChokeController implements Runnable {
     private int interval;
     private int preferredNeighboursCount;
-    private PeerAdmin peerAdmin;
+    private PeerManager peerAdmin;
     private Random rand = new Random();
     private ScheduledFuture<?> job = null;
     private ScheduledExecutorService scheduler = null;
 
-    ChokeController(PeerAdmin padmin) {
-        this.peerAdmin = padmin;
-        this.interval = padmin.getUnchockingInterval();
-        this.preferredNeighboursCount = padmin.getNoOfPreferredNeighbors();
+    ChokeController(PeerManager peerManager) {
+        this.peerAdmin = peerManager;
+        this.interval = peerManager.getUnchockingInterval();
+        this.preferredNeighboursCount = peerManager.getNoOfPreferredNeighbors();
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
@@ -29,8 +29,8 @@ public class ChokeController implements Runnable {
 
     public void run() {
         try {
-            HashSet<String> unchokedlist = new HashSet<>(this.peerAdmin.getUnchokedList());
-            HashSet<String> newlist = new HashSet<>();
+            Set<String> unchokedPeerList = new HashSet<>(this.peerAdmin.getUnchokedList());
+            Set<String> newlist = new HashSet<>();
             List<String> interested = new ArrayList<String>(this.peerAdmin.getInterestedList());
             if (interested.size() > 0) {
             	int iter = 0;
@@ -48,7 +48,7 @@ public class ChokeController implements Runnable {
                             nextPeer = interested.get(this.rand.nextInt(interested.size()));
                             nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
                         }
-                        if (!unchokedlist.contains(nextPeer)) {
+                        if (!unchokedPeerList.contains(nextPeer)) {
                             if (this.peerAdmin.getOptimisticUnchokedPeer() == null
                                     || this.peerAdmin.getOptimisticUnchokedPeer().compareTo(nextPeer) != 0) {
                                 this.peerAdmin.getUnchokedList().add(nextPeer);
@@ -57,7 +57,7 @@ public class ChokeController implements Runnable {
                             }
                         }
                         else {
-                            unchokedlist.remove(nextPeer);
+                        	unchokedPeerList.remove(nextPeer);
                         }
                         newlist.add(nextPeer);
                         nextHandler.resetDownloadRate();
@@ -71,11 +71,10 @@ public class ChokeController implements Runnable {
                     Iterator<Map.Entry<String, Integer>> iterator = rates.entrySet().iterator();
                     int counter = 0;
                     while (counter < iter && iterator.hasNext()) {
-
                         Map.Entry<String, Integer> ent = iterator.next();
                         if (interested.contains(ent.getKey())) {
                             PeerController nextHandler = this.peerAdmin.getPeerHandler(ent.getKey());
-                            if (!unchokedlist.contains(ent.getKey())) {
+                            if (!unchokedPeerList.contains(ent.getKey())) {
                                 String optUnchoke = this.peerAdmin.getOptimisticUnchokedPeer();
                                 if (optUnchoke == null || optUnchoke.compareTo(ent.getKey()) != 0) {
                                     this.peerAdmin.getUnchokedList().add(ent.getKey());
@@ -84,7 +83,7 @@ public class ChokeController implements Runnable {
                                 }
                             }
                             else {
-                                unchokedlist.remove(ent.getKey());
+                            	unchokedPeerList.remove(ent.getKey());
                             }
                             newlist.add(ent.getKey());
                             nextHandler.resetDownloadRate();
@@ -92,25 +91,16 @@ public class ChokeController implements Runnable {
                         }
                     }
                 }
-                for (String peer : unchokedlist) {
-                    PeerController nextHandler = this.peerAdmin.getPeerHandler(peer);
-                    nextHandler.messageSender.issueChokeMessage();
-                }
+                
+                this.issueChokeMessage(unchokedPeerList);
                 this.peerAdmin.updateUnchokedList(newlist);
                 if(newlist.size() > 0){
                     this.peerAdmin.getClientLogger().updatePreferredNeighbors(new ArrayList<>(newlist));
                 }
-//                for (String peer : unchokedlist) {
-//                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
-//                    nextHandler.messageSender.sendChokedMessage();
-//                }
             }
             else {
                 this.peerAdmin.resetUnchokedList();
-                for (String peer : unchokedlist) {
-                    PeerController nextHandler = this.peerAdmin.getPeerHandler(peer);
-                    nextHandler.messageSender.issueChokeMessage();
-                }
+                this.issueChokeMessage(unchokedPeerList);
                 if(this.peerAdmin.checkIfAllPeersAreDone()) {
                     this.peerAdmin.cancelChokes();
                 }
@@ -119,6 +109,13 @@ public class ChokeController implements Runnable {
         catch (Exception e) {
             e.printStackTrace();
         }
+    }
+    
+    public void issueChokeMessage(Set<String> unchokedPeerList) {
+    	unchokedPeerList.forEach(peer -> {
+        	PeerController nextHandler = this.peerAdmin.getPeerHandler(peer);
+            nextHandler.messageSender.issueChokeMessage();
+        });
     }
 
     public void cancelJob() {

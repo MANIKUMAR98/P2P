@@ -1,27 +1,20 @@
 package src;
 
-import java.io.ByteArrayOutputStream;
-import java.net.Socket;
-import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.nio.*;
-import java.lang.*;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
-import static java.util.stream.Collectors.*;
 import java.util.concurrent.TimeUnit;
 
 public class TerminateHandler implements Runnable {
     private int interval;
-    private PeerAdmin peerAdmin;
+    private PeerManager peerManager;
     private Random rand = new Random();
     private ScheduledFuture<?> job = null;
     private ScheduledExecutorService scheduler = null;
 
-    TerminateHandler(PeerAdmin padmin) {
-        this.peerAdmin = padmin;
+    TerminateHandler(PeerManager peerManager) {
+        this.peerManager = peerManager;
         this.scheduler = Executors.newScheduledThreadPool(1);
     }
 
@@ -32,8 +25,8 @@ public class TerminateHandler implements Runnable {
 
     public void run() {
         try {
-            if(this.peerAdmin.checkIfDone()) {
-                this.peerAdmin.closeHandlers();
+            if(this.peerManager.checkIfDone()) {
+                this.peerManager.closeHandlers();
                 this.cancelJob();
             }
         } 

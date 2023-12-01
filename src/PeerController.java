@@ -8,13 +8,13 @@ import java.util.BitSet;
 
 public class PeerController implements Runnable {
 	private Socket communicationChannel;
-	private PeerAdmin coordinator;
+	private PeerManager coordinator;
 
 	public boolean choked = true;
 	private String peerControllerId;
 	private boolean  channelEstablished = false;
 	private boolean  intialized = false;
-	private HandshakeMessage estMessage;
+	private HandshakeMessage handshakeMessage;
 	private volatile int chunkDownloadRate = 0;
 	private volatile ObjectOutputStream out_stream;
 	private volatile ObjectInputStream input_stream;
@@ -23,16 +23,16 @@ public class PeerController implements Runnable {
 	public MessageSender messageSender;
 
 
-	public PeerController(Socket communicationChannel, PeerAdmin coordinator) {
+	public PeerController(Socket communicationChannel, PeerManager coordinator) {
 		this.communicationChannel = communicationChannel;
 		this.coordinator = coordinator;
 		this.messageSender = new MessageSender(this);
 		initializeIOStreams();
-		this.estMessage = new HandshakeMessage(this.coordinator.getPeerID());
+		this.handshakeMessage = new HandshakeMessage(this.coordinator.getPeerID());
 
 	}
 
-	public PeerAdmin getCoordinator() {
+	public PeerManager getCoordinator() {
 		return this.coordinator;
 	}
 
@@ -58,7 +58,7 @@ public class PeerController implements Runnable {
 
 	public void run() {
 		try {
-			byte[] msg = this.estMessage.buildHandShakeMessage();
+			byte[] msg = this.handshakeMessage.generateHandshakeMessage();
 			this.out_stream.write(msg);
 			this.out_stream.flush();
 			while (true) {
@@ -245,8 +245,8 @@ public class PeerController implements Runnable {
 	}
 	public void processHandShakeMessage(byte[] message) {
 		try {
-			this.estMessage.readHandShakeMessage(message);
-			this.peerControllerId = this.estMessage.getPeerID();
+			this.handshakeMessage.pareseHandshakeMessage(message);
+			this.peerControllerId = this.handshakeMessage.getPeerId();
 			this.coordinator.addJoinedPeer(this, this.peerControllerId);
 			this.coordinator.addJoinedThreads(this.peerControllerId, Thread.currentThread());
 			this.channelEstablished = true;

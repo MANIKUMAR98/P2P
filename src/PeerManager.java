@@ -7,10 +7,11 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Random;
+import java.util.Set;
 import java.util.HashSet;
 
 
-public class PeerAdmin {
+public class PeerManager {
 	private String localPeerID;
 	private RemotePeerInfo localConfiguration;
 	private HashMap<String, RemotePeerInfo> allPeerDetailsMap;
@@ -24,8 +25,8 @@ public class PeerAdmin {
 	private volatile ClientLogger clientLogger;
 	private volatile HashMap<String, BitSet> chunkAvailabilityMap;
 	private volatile String[] requestedInfo;
-	private volatile HashSet<String> unChokedPeerList;
-	private volatile HashSet<String> interestedPeerList;
+	private volatile Set<String> unChokedPeerList;
+	private volatile Set<String> interestedPeerList;
 	private volatile String optUnchockedPeer;
 	private int chunkCount;
 	private volatile RandomAccessFile filePointer;
@@ -38,7 +39,7 @@ public class PeerAdmin {
 
 	private Random randObj = new Random();
 
-	public PeerAdmin(String peerID) {
+	public PeerManager(String peerID) {
 		this.localPeerID = peerID;
 		this.allPeerDetailsMap = new HashMap<>();
 		this.chunkAvailabilityMap = new HashMap<>();
@@ -337,7 +338,7 @@ public class PeerAdmin {
 		this.interestedPeerList.clear();
 	}
 
-	public synchronized HashSet<String> getInterestedList() {
+	public synchronized Set<String> getInterestedList() {
 		return this.interestedPeerList;
 	}
 
@@ -345,7 +346,7 @@ public class PeerAdmin {
 		return this.unChokedPeerList.add(peerid);
 	}
 
-	public synchronized HashSet<String> getUnchokedList() {
+	public synchronized Set<String> getUnchokedList() {
 		return this.unChokedPeerList;
 	}
 
@@ -353,7 +354,7 @@ public class PeerAdmin {
 		this.unChokedPeerList.clear();
 	}
 
-	public synchronized void updateUnchokedList(HashSet<String> newSet) {
+	public synchronized void updateUnchokedList(Set<String> newSet) {
 		this.unChokedPeerList = newSet;
 	}
 
