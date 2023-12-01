@@ -1,11 +1,12 @@
 package src;
 
 import java.util.*;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.Executors;
-import static java.util.stream.Collectors.*;
 import java.util.concurrent.TimeUnit;
+
+import static java.util.stream.Collectors.toMap;
 
 public class ChokeHandler implements Runnable {
     private int interval;
@@ -41,8 +42,8 @@ public class ChokeHandler implements Runnable {
                 if (this.peerAdmin.getCompletedPieceCount() == this.peerAdmin.getPieceCount()) {
                     for (int i = 0; i < iter; i++) {
                         String nextPeer = interested.get(this.rand.nextInt(interested.size()));
-                        PeerHandler nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
-//                      /for not selecting not selecting same peer which is in newlist
+                        PeerController nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
+//                      /for not selecting not se;ecting same peer which is in newlist
                         while (newlist.contains(nextPeer)) {
                             nextPeer = interested.get(this.rand.nextInt(interested.size()));
                             nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
@@ -51,7 +52,7 @@ public class ChokeHandler implements Runnable {
                             if (this.peerAdmin.getOptimisticUnchokedPeer() == null
                                     || this.peerAdmin.getOptimisticUnchokedPeer().compareTo(nextPeer) != 0) {
                                 this.peerAdmin.getUnchokedList().add(nextPeer);
-                                nextHandler.messageSender.sendUnChokedMessage();
+                                nextHandler.messageSender.issueUnChokeMessage();
 
                             }
                         }
@@ -73,12 +74,12 @@ public class ChokeHandler implements Runnable {
 
                         Map.Entry<String, Integer> ent = iterator.next();
                         if (interested.contains(ent.getKey())) {
-                            PeerHandler nextHandler = this.peerAdmin.getPeerHandler(ent.getKey());
+                            PeerController nextHandler = this.peerAdmin.getPeerHandler(ent.getKey());
                             if (!unchokedlist.contains(ent.getKey())) {
                                 String optUnchoke = this.peerAdmin.getOptimisticUnchokedPeer();
                                 if (optUnchoke == null || optUnchoke.compareTo(ent.getKey()) != 0) {
                                     this.peerAdmin.getUnchokedList().add(ent.getKey());
-                                    nextHandler.messageSender.sendUnChokedMessage();
+                                    nextHandler.messageSender.issueUnChokeMessage();
 
                                 }
                             }
@@ -92,8 +93,8 @@ public class ChokeHandler implements Runnable {
                     }
                 }
                 for (String peer : unchokedlist) {
-                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
-                    nextHandler.messageSender.sendChokedMessage();
+                    PeerController nextHandler = this.peerAdmin.getPeerHandler(peer);
+                    nextHandler.messageSender.issueChokeMessage();
                 }
                 this.peerAdmin.updateUnchokedList(newlist);
                 if(newlist.size() > 0){
@@ -106,10 +107,10 @@ public class ChokeHandler implements Runnable {
             }
             else {
                 this.peerAdmin.resetUnchokedList();
-                unchokedlist.forEach(peer -> {
-                	PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
-                    nextHandler.messageSender.sendChokedMessage();
-                });
+                for (String peer : unchokedlist) {
+                    PeerController nextHandler = this.peerAdmin.getPeerHandler(peer);
+                    nextHandler.messageSender.issueChokeMessage();
+                }
                 if(this.peerAdmin.checkIfAllPeersAreDone()) {
                     this.peerAdmin.cancelChokes();
                 }

@@ -6,13 +6,13 @@ import java.util.BitSet;
 
 public class MessageSender {
 
-    private PeerHandler peerHandler;
+    private PeerController peerController;
 
-    public MessageSender(PeerHandler peerHandler) {
-        this.peerHandler = peerHandler;
+    public MessageSender(PeerController peerController) {
+        this.peerController = peerController;
     }
 
-    public void sendChokedMessage() {
+    public void issueChokeMessage() {
         try {
             sendMessage(new ActualMessage('0').buildActualMessage());
         } catch (Exception e) {
@@ -20,7 +20,7 @@ public class MessageSender {
         }
     }
 
-    public void sendUnChokedMessage() {
+    public void issueUnChokeMessage() {
         try {
             sendMessage(new ActualMessage('1').buildActualMessage());
         } catch (Exception e) {
@@ -28,7 +28,7 @@ public class MessageSender {
         }
     }
 
-    public void sendInterestedMessage() {
+    public void issueInterestedMessage() {
         try {
             sendMessage(new ActualMessage('2').buildActualMessage());
         } catch (Exception e) {
@@ -36,7 +36,7 @@ public class MessageSender {
         }
     }
 
-    public void sendNotInterestedMessage() {
+    public void issueNotInterestedMessage() {
         try {
             sendMessage(new ActualMessage('3').buildActualMessage());
         } catch (Exception e) {
@@ -44,16 +44,16 @@ public class MessageSender {
         }
     }
 
-    public void sendHaveMessage(int pieceIndex) {
+    public void issueHaveMessage(int pieceIndex) {
         try {
-            byte[] bytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
-            sendMessage(new ActualMessage('4', bytes).buildActualMessage());
+            byte[] data = ByteBuffer.allocate(4).putInt(pieceIndex).array();
+            sendMessage(new ActualMessage('4', data).buildActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void sendBitFieldMessage(BitSet bitSet) {
+    public void issueBitFieldMessage(BitSet bitSet) {
         try {
             sendMessage(new ActualMessage('5', bitSet.toByteArray()).buildActualMessage());
         } catch (Exception e) {
@@ -61,20 +61,20 @@ public class MessageSender {
         }
     }
 
-    public void sendRequestMessage(int pieceIndex) {
+    public void issueRequestMessage(int pieceIndex) {
         try {
-            byte[] bytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
-            sendMessage(new ActualMessage('6', bytes).buildActualMessage());
+            byte[] data = ByteBuffer.allocate(4).putInt(pieceIndex).array();
+            sendMessage(new ActualMessage('6', data).buildActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void sendPieceMessage(int pieceIndex, byte[] payload) {
+    public void transmitPieceMessage(int chunkIndex, byte[] payload) {
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            byte[] bytes = ByteBuffer.allocate(4).putInt(pieceIndex).array();
-            stream.write(bytes);
+            byte[] data = ByteBuffer.allocate(4).putInt(chunkIndex).array();
+            stream.write(data);
             stream.write(payload);
             sendMessage(new ActualMessage('7', stream.toByteArray()).buildActualMessage());
         } catch (Exception e) {
@@ -82,17 +82,17 @@ public class MessageSender {
         }
     }
 
-    public void sendBitField() {
+    public void issueBitField() {
         try {
-            BitSet myAvailability = this.peerHandler.getCoordinator().getAvailabilityOf(this.peerHandler.getCoordinator().getPeerID());
-            ActualMessage am = new ActualMessage('5', myAvailability.toByteArray());
-            this.peerHandler.send(am.buildActualMessage());
+            BitSet coordinatorBitField = this.peerController.getCoordinator().getAvailabilityOf(this.peerController.getCoordinator().getPeerID());
+            ActualMessage msgObj = new ActualMessage('5', coordinatorBitField.toByteArray());
+            this.peerController.transmitMessage(msgObj.buildActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     private void sendMessage(byte[] message) {
-        peerHandler.send(message);
+        peerController.transmitMessage(message);
     }
 }

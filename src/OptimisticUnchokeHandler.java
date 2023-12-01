@@ -45,20 +45,20 @@ public class OptimisticUnchokeHandler implements Runnable {
                 }
                 this.peerAdmin.setOptimisticUnchokdPeer(nextPeer);
                 if(nextPeer != null) {
-                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
-                    nextHandler.messageSender.sendUnChokedMessage();
+                    PeerController nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
+                    nextHandler.messageSender.issueUnChokeMessage();
                     this.peerAdmin.getClientLogger().storeUnchokedNeighborLog(this.peerAdmin.getOptimisticUnchokedPeer());
                 }
                 if (optUnchoked != null && !this.peerAdmin.getUnchokedList().contains(optUnchoked)) {
-                    this.peerAdmin.getPeerHandler(optUnchoked).messageSender.sendChokedMessage();
+                    this.peerAdmin.getPeerHandler(optUnchoked).messageSender.issueChokeMessage();
                 }
             }
             else {
                 String currentOpt = this.peerAdmin.getOptimisticUnchokedPeer();
                 this.peerAdmin.setOptimisticUnchokdPeer(null);
                 if (currentOpt != null && !this.peerAdmin.getUnchokedList().contains(currentOpt)) {
-                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(currentOpt);
-                    nextHandler.messageSender.sendChokedMessage();
+                    PeerController nextHandler = this.peerAdmin.getPeerHandler(currentOpt);
+                    nextHandler.messageSender.issueChokeMessage();
                 }
                 if(this.peerAdmin.checkIfAllPeersAreDone()) {
                     this.peerAdmin.cancelChokes();
