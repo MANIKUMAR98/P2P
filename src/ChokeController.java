@@ -8,7 +8,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.stream.Collectors.toMap;
 
-public class ChokeHandler implements Runnable {
+public class ChokeController implements Runnable {
     private int interval;
     private int preferredNeighboursCount;
     private PeerAdmin peerAdmin;
@@ -16,7 +16,7 @@ public class ChokeHandler implements Runnable {
     private ScheduledFuture<?> job = null;
     private ScheduledExecutorService scheduler = null;
 
-    ChokeHandler(PeerAdmin padmin) {
+    ChokeController(PeerAdmin padmin) {
         this.peerAdmin = padmin;
         this.interval = padmin.getUnchockingInterval();
         this.preferredNeighboursCount = padmin.getNoOfPreferredNeighbors();

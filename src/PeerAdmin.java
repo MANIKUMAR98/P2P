@@ -29,7 +29,7 @@ public class PeerAdmin {
 	private volatile String optUnchockedPeer;
 	private int chunkCount;
 	private volatile RandomAccessFile filePointer;
-	private volatile ChokeHandler chokeController;
+	private volatile ChokeController chokeController;
 	private volatile OptimisticUnchokeHandler optimisticUnChokeController;
 	private volatile TerminateHandler cleanupHandler;
 	private volatile HashMap<String, Integer> chunkDownloadRateInfo;
@@ -52,7 +52,7 @@ public class PeerAdmin {
 		this.unChokedPeerList = new HashSet<>();
 		this.interestedPeerList = new HashSet<>();
 		this.initPeer();
-		this.chokeController = new ChokeHandler(this);
+		this.chokeController = new ChokeController(this);
 		this.chunkDownloadRateInfo = new HashMap<>();
 		this.optimisticUnChokeController = new OptimisticUnchokeHandler(this);
 		this.cleanupHandler = new TerminateHandler(this);
@@ -378,7 +378,7 @@ public class PeerAdmin {
 		return this.optimisticUnChokeController;
 	}
 
-	public synchronized ChokeHandler getchHandler() {
+	public synchronized ChokeController getchHandler() {
 		return this.chokeController;
 	}
 
