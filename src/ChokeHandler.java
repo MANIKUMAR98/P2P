@@ -32,12 +32,17 @@ public class ChokeHandler implements Runnable {
             HashSet<String> newlist = new HashSet<>();
             List<String> interested = new ArrayList<String>(this.peerAdmin.getInterestedList());
             if (interested.size() > 0) {
-                int iter = Math.min(this.preferredNeighboursCount, interested.size());
+            	int iter = 0;
+            	if(this.preferredNeighboursCount < interested.size()) {
+            		iter = this.preferredNeighboursCount;
+            	} else {
+            		iter = interested.size();
+            	}
                 if (this.peerAdmin.getCompletedPieceCount() == this.peerAdmin.getPieceCount()) {
                     for (int i = 0; i < iter; i++) {
                         String nextPeer = interested.get(this.rand.nextInt(interested.size()));
                         PeerHandler nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
-//                      /for not selecting not se;ecting same peer which is in newlist
+//                      /for not selecting not selecting same peer which is in newlist
                         while (newlist.contains(nextPeer)) {
                             nextPeer = interested.get(this.rand.nextInt(interested.size()));
                             nextHandler = this.peerAdmin.getPeerHandler(nextPeer);
@@ -101,10 +106,10 @@ public class ChokeHandler implements Runnable {
             }
             else {
                 this.peerAdmin.resetUnchokedList();
-                for (String peer : unchokedlist) {
-                    PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
+                unchokedlist.forEach(peer -> {
+                	PeerHandler nextHandler = this.peerAdmin.getPeerHandler(peer);
                     nextHandler.messageSender.sendChokedMessage();
-                }
+                });
                 if(this.peerAdmin.checkIfAllPeersAreDone()) {
                     this.peerAdmin.cancelChokes();
                 }

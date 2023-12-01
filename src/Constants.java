@@ -34,4 +34,5 @@ public class Constants {
         public static final String FILE_NAME = "FileName";
         public static final String FILE_SIZE = "FileSize";
         public static final String PIECE_SIZE = "PieceSize";
+        public static final String HANDSHAKE_HEADER = "P2PFILESHARINGPROJ";
 }

@@ -1,16 +1,11 @@
 package src;
 
-import java.io.ByteArrayOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.SocketException;
-import java.nio.*;
 import java.util.BitSet;
 
-import java.lang.*;
-import java.util.HashMap;
-import java.util.List;
 
 public class PeerHandler implements Runnable {
 	private Socket communicationChannel;
@@ -64,7 +59,7 @@ public class PeerHandler implements Runnable {
 
 	public void run() {
 		try {
-			byte[] msg = this.estMessage.buildHandShakeMessage();
+			byte[] msg = this.estMessage.generateHandshakeMessage();
 			this.out_stream.write(msg);
 			this.out_stream.flush();
 			while (true) {
@@ -251,8 +246,8 @@ public class PeerHandler implements Runnable {
 	}
 	public void processHandShakeMessage(byte[] message) {
 		try {
-			this.estMessage.readHandShakeMessage(message);
-			this.peerControllerId = this.estMessage.getPeerID();
+			this.estMessage.pareseHandshakeMessage(message);
+			this.peerControllerId = this.estMessage.getPeerId();
 			this.coordinator.addJoinedPeer(this, this.peerControllerId);
 			this.coordinator.addJoinedThreads(this.peerControllerId, Thread.currentThread());
 			this.channelEstablished = true;
