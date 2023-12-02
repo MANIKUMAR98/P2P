@@ -47,7 +47,7 @@ public class CommonConfiguration {
             }
         } 
         catch (Exception ex) {
-            System.out.println(ex);
+            System.err.println("Exception occurred while loading the Common.cfg file "+ex);
         } finally {
         		try {
         			if(fileReader != null) {

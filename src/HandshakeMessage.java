@@ -41,7 +41,7 @@ public class HandshakeMessage {
         this.peerId = peerId;
     }
 
-    public void pareseHandshakeMessage(byte[] data){
+    public void parseHandshakeMessage(byte[] data){
         String handshakeMessage = new String(data, StandardCharsets.UTF_8);
         this.peerId = handshakeMessage.substring(28,32);
     }

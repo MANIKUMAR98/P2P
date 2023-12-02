@@ -1,27 +1,30 @@
 package src;
 
-import java.io.*;
+import java.io.File;
+import java.io.RandomAccessFile;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.HashSet;
 
 
 public class PeerManager {
 	private String localPeerID;
-	private RemotePeerInfo localConfiguration;
-	private HashMap<String, RemotePeerInfo> allPeerDetailsMap;
-	private ArrayList<String> allPeerList;
+	private PeerInformation localConfiguration;
+	private Map<String, PeerInformation> allPeerDetailsMap;
+	private List<String> allPeerList;
 	private volatile HashMap<String, PeerController> connectedPeers;
 	private volatile HashMap<String, Thread> connectedPeerThreads;
 	private volatile ServerSocket localChannel;
-	private PeerServer localServer;
+	private CooperativeServer cooperativeServer;
 	private CommonConfiguration commonConfig;
-	private PeerInfoConfig peerConfigurationInfo;
+	private PeerInformationConfiguration peerInformationConfiguration;
 	private volatile ClientLogger clientLogger;
 	private volatile HashMap<String, BitSet> chunkAvailabilityMap;
 	private volatile String[] requestedInfo;
@@ -31,8 +34,8 @@ public class PeerManager {
 	private int chunkCount;
 	private volatile RandomAccessFile filePointer;
 	private volatile ChokeController chokeController;
-	private volatile OptimisticUnchokeHandler optimisticUnChokeController;
-	private volatile TerminateHandler cleanupHandler;
+	private volatile OptimisticUnchokeController optimisticUnchokeController;
+	private volatile ShutdownProcessor shutdownProcessor;
 	private volatile HashMap<String, Integer> chunkDownloadRateInfo;
 	private Thread localServerThread;
 	private volatile Boolean localFileDownloadComplete;
@@ -47,7 +50,7 @@ public class PeerManager {
 		this.connectedPeers = new HashMap<>();
 		this.connectedPeerThreads = new HashMap<>();
 		this.commonConfig = new CommonConfiguration();
-		this.peerConfigurationInfo = new PeerInfoConfig();
+		this.peerInformationConfiguration = new PeerInformationConfiguration();
 		this.clientLogger = new ClientLogger(peerID);
 		this.localFileDownloadComplete = false;
 		this.unChokedPeerList = new HashSet<>();
@@ -55,21 +58,21 @@ public class PeerManager {
 		this.initializeLocalPeer();
 		this.chokeController = new ChokeController(this);
 		this.chunkDownloadRateInfo = new HashMap<>();
-		this.optimisticUnChokeController = new OptimisticUnchokeHandler(this);
-		this.cleanupHandler = new TerminateHandler(this);
-		this.chokeController.startJob();
-		this.optimisticUnChokeController.startJob();
+		this.optimisticUnchokeController = new OptimisticUnchokeController(this);
+		this.shutdownProcessor = new ShutdownProcessor(this);
+		this.chokeController.initilizeTheJob();
+		this.optimisticUnchokeController.initilizeTheJob();
 	}
 
 	public void initializeLocalPeer() {
 		try {
 			this.commonConfig.InitilizeCommonConfiguration();;
-			this.peerConfigurationInfo.loadConfigFile();
+			this.peerInformationConfiguration.initilizePeerInformationFile();
 			this.chunkCount = this.calcChunkCount();
 			this.requestedInfo = new String[this.chunkCount];
-			this.localConfiguration = this.peerConfigurationInfo.getPeerConfig(this.localPeerID);
-			this.allPeerDetailsMap = this.peerConfigurationInfo.getPeerInfoMap();
-			this.allPeerList = this.peerConfigurationInfo.getPeerList();
+			this.localConfiguration = this.peerInformationConfiguration.getPeerInfoConfiguration(localPeerID);
+			this.allPeerDetailsMap = this.peerInformationConfiguration.getRemotePeerInformationMap();
+			this.allPeerList = this.peerInformationConfiguration.getPeerInformation();
 			String fileLocation = "peer_" + this.localPeerID;
 			File fileHandler = new File(fileLocation);
 			fileHandler.mkdir();
@@ -94,8 +97,8 @@ public class PeerManager {
 	public void startLocalCoordinator() {
 		try {
 			this.localChannel = new ServerSocket(this.localConfiguration.peerPort);
-			this.localServer = new PeerServer(this.localPeerID, this.localChannel, this);
-			this.localServerThread = new Thread(this.localServer);
+			this.cooperativeServer = new CooperativeServer(this.localPeerID, this.localChannel, this);
+			this.localServerThread = new Thread(this.cooperativeServer);
 			this.localServerThread.start();
 		}
 		catch (Exception e) {
@@ -111,8 +114,8 @@ public class PeerManager {
 					break;
 				}
 				else {
-					RemotePeerInfo peer = this.allPeerDetailsMap.get(peerControllerID);
-					Socket temp = new Socket(peer.peerAddress, peer.peerPort);
+					PeerInformation peerInformation = this.allPeerDetailsMap.get(peerControllerID);
+					Socket temp = new Socket(peerInformation.peerAddress, peerInformation.peerPort);
 					PeerController peerControllerObj = new PeerController(temp, this);
 					peerControllerObj.setPeerControllerId(peerControllerID);
 					this.addConnectedPeer(peerControllerObj, peerControllerID);
@@ -376,8 +379,8 @@ public class PeerManager {
 		return true;
 	}
 
-	public synchronized OptimisticUnchokeHandler getOptController() {
-		return this.optimisticUnChokeController;
+	public synchronized OptimisticUnchokeController getOptimisticUnchokeController() {
+		return this.optimisticUnchokeController;
 	}
 
 	public synchronized ChokeController getChokeController() {
@@ -408,8 +411,8 @@ public class PeerManager {
 
 	public synchronized void cancelChokes() {
 		try {
-			this.getOptController().cancelJob();
-			this.getChokeController().cancelJob();
+			this.getOptimisticUnchokeController().abortJob();
+			this.getChokeController().abortJob();
 			this.resetUnChokedPeerList();
 			this.setOptimisticUnChokedPeer(null);
 			this.resetInterestedPeerList();
@@ -418,7 +421,7 @@ public class PeerManager {
 			this.getLocalChannel().close();
 			this.getLocalServerThread().stop();
 			this.localFileDownloadComplete = true;
-			this.cleanupHandler.startJob(6);
+			this.shutdownProcessor.initilizeJob(6);
 		}
 		catch (Exception e) {
 			e.printStackTrace();

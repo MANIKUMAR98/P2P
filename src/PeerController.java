@@ -245,7 +245,7 @@ public class PeerController implements Runnable {
 	}
 	public void processHandShakeMessage(byte[] message) {
 		try {
-			this.handshakeMessage.pareseHandshakeMessage(message);
+			this.handshakeMessage.parseHandshakeMessage(message);
 			this.peerControllerId = this.handshakeMessage.getPeerId();
 			this.coordinator.addConnectedPeer(this, this.peerControllerId);
 			this.coordinator.addJoinedThreads(this.peerControllerId, Thread.currentThread());

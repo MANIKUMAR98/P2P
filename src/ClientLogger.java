@@ -26,7 +26,7 @@ public class ClientLogger {
 		}
 	 }
 	    private void initilizeFormat() {
-	    	System.setProperty("java.util.logging.SimpleFormatter.format", "%5$s %n");
+	    	System.setProperty("java.util.logging.SimpleFormatter.format", Constants.SIIMPLE_FORMAT_FOR_LOGGER);
 	        this.logFileHandlerForPeer.setFormatter(new SimpleFormatter());
 	        this.clientLogger.setUseParentHandlers(false);
 	        this.clientLogger.addHandler(this.logFileHandlerForPeer);
