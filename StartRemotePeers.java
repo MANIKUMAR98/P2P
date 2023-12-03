@@ -59,13 +59,14 @@ public class StartRemotePeers {
 				
 			String username = "manikuma.honnena";   //username to connect to remote server
 		    String projPath = "/cise/homes/manikuma.honnena/P2P"; //project path where peer process exists in remote server
-		    String pubKey = "/Users/manikumar/.ssh/id_rsa"; //pubkey path in local machine
+		    String rsaKey = "/Users/manikumar/.ssh/id_rsa"; //rsaKey path in local machine
 			// start clients at remote hosts
 			for (int i = 0; i < myStart.peerInfoVector.size(); i++) {
 				RemotePeerInfo pInfo = (RemotePeerInfo) myStart.peerInfoVector.elementAt(i);
 				System.out.println("Start remote peer " + pInfo.peerId +  " at " + pInfo.peerAddress );
-				Runtime.getRuntime().exec("ssh -i " + pubKey + " " + username + pInfo.peerAddress + " cd " + 
+				Runtime.getRuntime().exec("ssh -i " + rsaKey + " " + username +"@"+ pInfo.peerAddress + " cd " + 
 				projPath + " ; java PeerProcess " + pInfo.peerId);
+				Thread.sleep(2000);
 			}		
 			System.out.println("Starting all remote peers has done." );
 
