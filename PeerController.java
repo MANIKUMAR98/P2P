@@ -77,7 +77,7 @@ public class PeerController implements Runnable {
 					byte[] response = new byte[payloadLength];
 					this.input_stream.readFully(response);
 					char msgTypeValue = (char) response[0];
-					ActualMessage msgObj = new ActualMessage();
+					ApplicationMessage msgObj = new ApplicationMessage();
 					msgObj.parseMessage(payloadLength, response);
 					processMessageType(Constants.MessageType.fromCode(msgTypeValue), msgObj);
 
@@ -103,7 +103,7 @@ public class PeerController implements Runnable {
 		}
 	}
 
-	private void processMessageType(Constants.MessageType msgType, ActualMessage am) {
+	private void processMessageType(Constants.MessageType msgType, ApplicationMessage am) {
 		switch (msgType) {
 			case CHOKE:
 				handleChokeMessage();
@@ -191,7 +191,7 @@ public class PeerController implements Runnable {
 		}
 	}
 
-	private void handleRequestMessage(ActualMessage msg) {
+	private void handleRequestMessage(ApplicationMessage msg) {
 		if (this.coordinator.getUnChokedPeerList().contains(this.peerControllerId)
 				|| (this.coordinator.getOptimisticUnChokedPeer() != null && this.coordinator.getOptimisticUnChokedPeer().compareTo(this.peerControllerId) == 0)) {
 			int chunkIndex = msg.getIndexFromMessageBody();
@@ -199,7 +199,7 @@ public class PeerController implements Runnable {
 		}
 	}
 
-	private void handlePieceMessage(ActualMessage msg) {
+	private void handlePieceMessage(ApplicationMessage msg) {
 		int chunkIndex = msg.getIndexFromMessageBody();
 		byte[] chunk = msg.getPieceMessageFromBody();
 		this.coordinator.outputToFileSync(chunk, chunkIndex);

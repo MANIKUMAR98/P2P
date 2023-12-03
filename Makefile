@@ -12,7 +12,7 @@ CLASSES = \
 		  ShutdownProcessor.java \
 		  Constants.java \
 		  CommonConfiguration.java \
-		  ActualMessage.java \
+		  ApplicationMessage.java \
 		  ChokeController.java \
 		  ClientLogger.java \
 		  CooperativeServer.java \
@@ -26,7 +26,6 @@ CLASSES = \
 		  PeerProcess.java \
 		  StartRemotePeers.java
 		  
-
 default: classes
 
 classes: $(CLASSES:.java=.class)

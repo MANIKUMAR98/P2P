@@ -5,22 +5,22 @@ import java.util.*;
 import java.io.*;
 import java.nio.*;
 
-public class ActualMessage {
+public class ApplicationMessage {
     private int messageLength;
     private char messageType;
     private byte[] messagePayload;
 
-    public ActualMessage() {
+    public ApplicationMessage() {
 
     }
 
-    public ActualMessage(char messageType) {
+    public ApplicationMessage(char messageType) {
         this.messageType = messageType;
         this.messageLength = 1;
         this.messagePayload = new byte[0];
     }
 
-    public ActualMessage(char messageType, byte[] messagePayload) {
+    public ApplicationMessage(char messageType, byte[] messagePayload) {
         this.messageType = messageType;
         this.messagePayload = messagePayload;
         this.messageLength = this.messagePayload.length + 1;

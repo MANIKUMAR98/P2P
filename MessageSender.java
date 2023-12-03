@@ -14,7 +14,7 @@ public class MessageSender {
 
     public void issueChokeMessage() {
         try {
-            sendMessage(new ActualMessage('0').generateActualMessage());
+            sendMessage(new ApplicationMessage('0').generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -22,7 +22,7 @@ public class MessageSender {
 
     public void issueUnChokeMessage() {
         try {
-            sendMessage(new ActualMessage('1').generateActualMessage());
+            sendMessage(new ApplicationMessage('1').generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -30,7 +30,7 @@ public class MessageSender {
 
     public void issueInterestedMessage() {
         try {
-            sendMessage(new ActualMessage('2').generateActualMessage());
+            sendMessage(new ApplicationMessage('2').generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -38,7 +38,7 @@ public class MessageSender {
 
     public void issueNotInterestedMessage() {
         try {
-            sendMessage(new ActualMessage('3').generateActualMessage());
+            sendMessage(new ApplicationMessage('3').generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -47,7 +47,7 @@ public class MessageSender {
     public void issueHaveMessage(int pieceIndex) {
         try {
             byte[] data = ByteBuffer.allocate(4).putInt(pieceIndex).array();
-            sendMessage(new ActualMessage('4', data).generateActualMessage());
+            sendMessage(new ApplicationMessage('4', data).generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -55,7 +55,7 @@ public class MessageSender {
 
     public void issueBitFieldMessage(BitSet bitSet) {
         try {
-            sendMessage(new ActualMessage('5', bitSet.toByteArray()).generateActualMessage());
+            sendMessage(new ApplicationMessage('5', bitSet.toByteArray()).generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -64,7 +64,7 @@ public class MessageSender {
     public void issueRequestMessage(int pieceIndex) {
         try {
             byte[] data = ByteBuffer.allocate(4).putInt(pieceIndex).array();
-            sendMessage(new ActualMessage('6', data).generateActualMessage());
+            sendMessage(new ApplicationMessage('6', data).generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -76,7 +76,7 @@ public class MessageSender {
             byte[] data = ByteBuffer.allocate(4).putInt(chunkIndex).array();
             stream.write(data);
             stream.write(payload);
-            sendMessage(new ActualMessage('7', stream.toByteArray()).generateActualMessage());
+            sendMessage(new ApplicationMessage('7', stream.toByteArray()).generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -85,7 +85,7 @@ public class MessageSender {
     public void issueBitField() {
         try {
             BitSet coordinatorBitField = this.peerController.getCoordinator().getChunkAvailabilityOf(this.peerController.getCoordinator().getLocalPeerID());
-            ActualMessage msgObj = new ActualMessage('5', coordinatorBitField.toByteArray());
+            ApplicationMessage msgObj = new ApplicationMessage('5', coordinatorBitField.toByteArray());
             this.peerController.transmitMessage(msgObj.generateActualMessage());
         } catch (Exception e) {
             e.printStackTrace();
