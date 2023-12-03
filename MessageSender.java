@@ -13,6 +13,7 @@ public class MessageSender {
     }
 
     public void issueChokeMessage() {
+        // send choke message
         try {
             sendMessage(new ApplicationMessage('0').generateActualMessage());
         } catch (Exception e) {
@@ -21,6 +22,7 @@ public class MessageSender {
     }
 
     public void issueUnChokeMessage() {
+        // send unchike message
         try {
             sendMessage(new ApplicationMessage('1').generateActualMessage());
         } catch (Exception e) {
@@ -29,6 +31,7 @@ public class MessageSender {
     }
 
     public void issueInterestedMessage() {
+        // send interested message
         try {
             sendMessage(new ApplicationMessage('2').generateActualMessage());
         } catch (Exception e) {
@@ -37,6 +40,7 @@ public class MessageSender {
     }
 
     public void issueNotInterestedMessage() {
+        //send not interested message
         try {
             sendMessage(new ApplicationMessage('3').generateActualMessage());
         } catch (Exception e) {
@@ -45,6 +49,7 @@ public class MessageSender {
     }
 
     public void issueHaveMessage(int pieceIndex) {
+        //send have message
         try {
             byte[] data = ByteBuffer.allocate(4).putInt(pieceIndex).array();
             sendMessage(new ApplicationMessage('4', data).generateActualMessage());
@@ -54,6 +59,7 @@ public class MessageSender {
     }
 
     public void issueBitFieldMessage(BitSet bitSet) {
+        //send BItFiles message
         try {
             sendMessage(new ApplicationMessage('5', bitSet.toByteArray()).generateActualMessage());
         } catch (Exception e) {
@@ -62,6 +68,7 @@ public class MessageSender {
     }
 
     public void issueRequestMessage(int pieceIndex) {
+        // send request message for a chunk
         try {
             byte[] data = ByteBuffer.allocate(4).putInt(pieceIndex).array();
             sendMessage(new ApplicationMessage('6', data).generateActualMessage());
@@ -71,6 +78,7 @@ public class MessageSender {
     }
 
     public void transmitPieceMessage(int chunkIndex, byte[] payload) {
+        //send chunk
         try {
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
             byte[] data = ByteBuffer.allocate(4).putInt(chunkIndex).array();
@@ -83,6 +91,7 @@ public class MessageSender {
     }
 
     public void issueBitField() {
+        //send BitFiled Message
         try {
             BitSet coordinatorBitField = this.peerController.getCoordinator().getChunkAvailabilityOf(this.peerController.getCoordinator().getLocalPeerID());
             ApplicationMessage msgObj = new ApplicationMessage('5', coordinatorBitField.toByteArray());

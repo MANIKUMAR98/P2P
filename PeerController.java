@@ -63,6 +63,7 @@ public class PeerController implements Runnable {
 			this.out_stream.flush();
 			while (true) {
 				if (!this.channelEstablished) {
+					// If no message is exchanged till now we start by exchaning the handshake and mark connection as estbalished for exchange of Actual message
 					byte[] receivedData = new byte[32];
 					this.input_stream.readFully(receivedData);
 					this.processHandShakeMessage(receivedData);
@@ -71,6 +72,7 @@ public class PeerController implements Runnable {
 					}
 				}
 				else {
+					// wait until atleast one full message is available before reading
 					while (this.input_stream.available() < 4) {
 					}
 					int payloadLength = this.input_stream.readInt();
@@ -79,6 +81,7 @@ public class PeerController implements Runnable {
 					char msgTypeValue = (char) response[0];
 					ApplicationMessage msgObj = new ApplicationMessage();
 					msgObj.parseMessage(payloadLength, response);
+					//process the message based on the type of the message
 					processMessageType(Constants.MessageType.fromCode(msgTypeValue), msgObj);
 
 				}
@@ -135,16 +138,18 @@ public class PeerController implements Runnable {
 	}
 
 	private void handleChokeMessage() {
-		this.choked = true;
-		this.coordinator.resetRequestedChunkInfo(this.peerControllerId);
+		this.choked = true; // set peer as choked
+		this.coordinator.resetRequestedChunkInfo(this.peerControllerId); // reset any chunk that was set a reuested to this peer
 		this.coordinator.getClientLogger().storeChokingNeighborLog(this.peerControllerId);
 	}
 
 	private void handleUnchokeMessage() {
 		this.coordinator.getClientLogger().storeUnchokedNeighborLog(this.peerControllerId);
 		this.choked = false;
+		// check if any can be requested to this peer
 		int chunkIndex = this.coordinator.checkChunksRequested(this.peerControllerId, -1);
 		if (chunkIndex == -1) {
+			// if no chunk can be requested , check if peer has any chunk that is not yet present in local server if not send not Interested message
 			if(!this.coordinator.checkIfInterested(this.peerControllerId, -1)) {
 				this.messageSender.issueNotInterestedMessage();
 			}
@@ -152,26 +157,32 @@ public class PeerController implements Runnable {
 				this.messageSender.issueInterestedMessage();
 			}
 		} else {
+			// if chunk can be requested set it as requested to the peer and send request message
 			this.coordinator.setChunkRequestedInfo(chunkIndex, this.peerControllerId);
 			this.messageSender.issueRequestMessage(chunkIndex);
 		}
 	}
 
 	private void handleInterestedMessage() {
+		// If interrested message is received add peer to interested list
 		this.coordinator.appendToInterestedList(this.peerControllerId);
 		this.coordinator.getClientLogger().storeInterestedLog(this.peerControllerId);
 	}
 
 	private void handleNotInterestedMessage() {
+		// remove peer from interested list
 		this.coordinator.setPeerAsNotInterested(this.peerControllerId);
 		this.coordinator.getClientLogger().storeNotInterestedLog(this.peerControllerId);
 	}
 
 	private void handleHaveMessage(int pieceIndex) {
+		// Update local record for the peer chinks and set it to true
 		this.coordinator.updateChunkAvailability(this.peerControllerId, pieceIndex);
+		// check if all peeer have all the chunks
 		if (this.coordinator.areAllPeersDone()) {
 			this.coordinator.cancelChokes();
 		}
+		//check if peer has any chunk that is not yet present in local server if not send not Interested message
 		if (this.coordinator.checkIfInterested(this.peerControllerId, pieceIndex)) {
 			this.messageSender.issueInterestedMessage();
 		} else {
@@ -181,6 +192,7 @@ public class PeerController implements Runnable {
 	}
 
 	private void handleBitFieldMessage(BitSet bset) {
+		// process BitFile message and send intreset or not interested message
 		this.processBitFieldMessage(bset);
 		if (!this.coordinator.hasSourceFile()) {
 			if (this.coordinator.checkIfInterested(this.peerControllerId, -1)) {
@@ -192,6 +204,7 @@ public class PeerController implements Runnable {
 	}
 
 	private void handleRequestMessage(ApplicationMessage msg) {
+		// If a peer requests for a chunk, check if its in the unchoked ot optimistically unchocked peer and the send the chunk
 		if (this.coordinator.getUnChokedPeerList().contains(this.peerControllerId)
 				|| (this.coordinator.getOptimisticUnChokedPeer() != null && this.coordinator.getOptimisticUnChokedPeer().compareTo(this.peerControllerId) == 0)) {
 			int chunkIndex = msg.getIndexFromMessageBody();
@@ -200,17 +213,19 @@ public class PeerController implements Runnable {
 	}
 
 	private void handlePieceMessage(ApplicationMessage msg) {
+		// When a chunk is received write the chunk to the file
 		int chunkIndex = msg.getIndexFromMessageBody();
 		byte[] chunk = msg.getPieceMessageFromBody();
 		this.coordinator.outputToFileSync(chunk, chunkIndex);
 		this.coordinator.updateChunkAvailability(this.coordinator.getLocalPeerID(), chunkIndex);
-		this.chunkDownloadRate++;
+		this.chunkDownloadRate++; // For determining unchoked list(Download rate)
 		Boolean allPeersAreDone = this.coordinator.areAllPeersDone();
 		this.coordinator.getClientLogger().storeDownloadedPieceLog(this.peerControllerId, chunkIndex, this.coordinator.getAvailableChunkCount());
 		this.coordinator.setChunkRequestedInfo(chunkIndex, null);
-		this.coordinator.sendHave(chunkIndex);
+		this.coordinator.sendHave(chunkIndex); // broadcast have message for the chunk
 		if (this.coordinator.getChunkAvailabilityOf(this.coordinator.getLocalPeerID()).cardinality() != this.coordinator
 				.getChunkCount()) {
+			// if downlaoding all the chunks is not complete check for next request to be made
 			int nextIndex = this.coordinator.checkChunksRequested(this.peerControllerId, chunkIndex);
 			if(!this.choked){
 				if (nextIndex != -1) {
@@ -228,6 +243,7 @@ public class PeerController implements Runnable {
 		} else {
 			this.coordinator.getClientLogger().storeTheDownloadCompleteLog();
 			if (allPeersAreDone) {
+				// if all the peers have completed download of file start cleanup
 				this.coordinator.cancelChokes();
 			}
 			else{
@@ -244,7 +260,7 @@ public class PeerController implements Runnable {
 		}
 	}
 	public void processHandShakeMessage(byte[] message) {
-		try {
+		try {// handle handshake message
 			this.handshakeMessage.parseHandshakeMessage(message);
 			this.peerControllerId = this.handshakeMessage.getPeerId();
 			this.coordinator.addConnectedPeer(this, this.peerControllerId);

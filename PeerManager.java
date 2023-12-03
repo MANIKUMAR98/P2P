@@ -66,6 +66,7 @@ public class PeerManager {
 
 	public void initializeLocalPeer() {
 		try {
+			//Initialize the local server, configurations, connect to neighbooring peers, start all the threads and schedulers
 			this.commonConfig.InitilizeCommonConfiguration();;
 			this.peerInformationConfiguration.initilizePeerInformationFile();
 			this.chunkCount = this.calcChunkCount();
@@ -96,6 +97,7 @@ public class PeerManager {
 
 	public void startLocalCoordinator() {
 		try {
+			// Creates the socket and bind the port and starts the local server thread to listen and accept connections
 			this.localChannel = new ServerSocket(this.localConfiguration.peerPort);
 			this.cooperativeServer = new CooperativeServer(this.localPeerID, this.localChannel, this);
 			this.localServerThread = new Thread(this.cooperativeServer);
@@ -108,7 +110,8 @@ public class PeerManager {
 
 	public void connectToOtherPeers() {
 		try {
-			Thread.sleep(5000);
+			// Connect to peers which have already started
+			Thread.sleep(5000); // wait for other servers to start
 			for (String peerControllerID : this.allPeerList) {
 				if (peerControllerID.equals(this.localPeerID)) {
 					break;
@@ -121,7 +124,7 @@ public class PeerManager {
 					this.addConnectedPeer(peerControllerObj, peerControllerID);
 					Thread peerControllerThread = new Thread(peerControllerObj);
 					this.addJoinedThreads(peerControllerID, peerControllerThread);
-					peerControllerThread.start();
+					peerControllerThread.start(); // start peer thread, accept and send messages
 				}
 			}
 		}
@@ -131,21 +134,23 @@ public class PeerManager {
 	}
 
 	public void setChunkAvailabilityMap() {
-		for (String pid : this.allPeerDetailsMap.keySet()) {
+		//create BitSet where each bit represent a chunk , and if the peer has the file, mark all the bit set
+		for (String peerControllerID : this.allPeerDetailsMap.keySet()) {
 			BitSet chunkAvailabliltyMap = new BitSet(this.chunkCount);
-			if (this.allPeerDetailsMap.get(pid).containsFile == 1) {
+			if (this.allPeerDetailsMap.get(peerControllerID).containsFile == 1) {
 				chunkAvailabliltyMap.set(0, this.chunkCount);
-				this.chunkAvailabilityMap.put(pid, chunkAvailabliltyMap);
+				this.chunkAvailabilityMap.put(peerControllerID, chunkAvailabliltyMap);
 			}
 			else {
 				chunkAvailabliltyMap.clear();
-				this.chunkAvailabilityMap.put(pid, chunkAvailabliltyMap);
+				this.chunkAvailabilityMap.put(peerControllerID, chunkAvailabliltyMap);
 			}
 		}
 	}
 
 	public synchronized void outputToFileSync(byte[] chunk, int chunkIndex) {
 		try {
+			//write the chink to file at proper position
 			int pointer = this.getChunkSize() * chunkIndex;
 			this.filePointer.seek(pointer);
 			this.filePointer.write(chunk);
@@ -157,6 +162,7 @@ public class PeerManager {
 
 	public synchronized byte[] inputFromFileSync(int chunkIndex) {
 		try {
+			//read a chunk from the file
 			int pointer = this.getChunkSize() * chunkIndex;
 			int length = this.getChunkSize();
 			if (chunkIndex == getChunkCount() - 1) {
@@ -175,6 +181,7 @@ public class PeerManager {
 	}
 
 	public HashMap<String, Integer> getChunkDownloadRates() {
+		//Gets the number of chunk downloded from each peer
 		HashMap<String, Integer> rates = new HashMap<>();
 		for (String key : this.connectedPeers.keySet()) {
 			rates.put(key, this.connectedPeers.get(key).getChunkDownloadRateRate());
@@ -183,30 +190,36 @@ public class PeerManager {
 	}
 
 	public synchronized void sendHave(int chunkIndex) {
+		// Broadcast have message
 		for (String peerControllerID : this.connectedPeers.keySet()) {
 			this.connectedPeers.get(peerControllerID).messageSender.issueHaveMessage(chunkIndex);
 		}
 	}
 
 	public synchronized void updateChunkAvailability(String peerControllerID, int chunkIndex) {
+		//Set the chunk as persent for the peer
 		this.chunkAvailabilityMap.get(peerControllerID).set(chunkIndex);
 	}
 
 	public synchronized void updateChunkDownloadRate(String endpeerid) {
+		// Increase cunk downloaded for the pee by 1
 		this.chunkDownloadRateInfo.put(endpeerid, this.chunkDownloadRateInfo.get(endpeerid) + 1);
 	}
 
-	public synchronized void updateChunkBitsetAvailability(String peerControllerID, BitSet chunkIndex) {
+	public synchronized void updateChunkBitsetAvailability(String peerControllerID, BitSet chunkIndexMap) {
+		// Remove existing BitSet for peer and replace it with new BitSet object
 		this.chunkAvailabilityMap.remove(peerControllerID);
-		this.chunkAvailabilityMap.put(peerControllerID, chunkIndex);
+		this.chunkAvailabilityMap.put(peerControllerID, chunkIndexMap);
 	}
 
 	public synchronized void addConnectedPeer(PeerController peerControllerObj, String peerControllerID) {
+		//Adds neww peer to the connectedPeers map
 		this.connectedPeers.put(peerControllerID, peerControllerObj);
 	}
 
-	public synchronized void addJoinedThreads(String epeerid, Thread th) {
-		this.connectedPeerThreads.put(epeerid, th);
+	public synchronized void addJoinedThreads(String peerControllerID, Thread thread) {
+		//add peer that connected to the server
+		this.connectedPeerThreads.put(peerControllerID, thread);
 	}
 
 	public synchronized HashMap<String, Thread> getConnectedPeerThreads() {
@@ -222,6 +235,7 @@ public class PeerManager {
 	}
 
 	public synchronized boolean checkIfInterested(String peerControllerID, int chunkIndex) {
+		// Check if the peer has the chunk and if the same chunk is not available in the local server if so returns true else false
 		BitSet peerChunkAvailabilty = this.getChunkAvailabilityOf(peerControllerID);
 		BitSet mine = this.getChunkAvailabilityOf(this.localPeerID);
 		if(chunkIndex != -1 && chunkIndex < this.chunkCount){
@@ -239,10 +253,12 @@ public class PeerManager {
 	}
 
 	public synchronized void setChunkRequestedInfo(int chunkIndex, String peerControllerID) {
+		// sets the chunkIndex as requested so that no multiple requests for the same chunk is made
 		this.requestedInfo[chunkIndex] = peerControllerID;
 	}
 
 	public synchronized int checkChunksRequested(String peerControllerID, int chunkIndex) {
+		//checks if the peer has a chunk that is not not available in local server and also the chink which is not yet requested to other peers
 		BitSet end = this.getChunkAvailabilityOf(peerControllerID);
 		BitSet mine = this.getChunkAvailabilityOf(this.localPeerID);
 		if(chunkIndex != -1 && chunkIndex < this.chunkCount){
@@ -251,6 +267,7 @@ public class PeerManager {
 				return chunkIndex;
 			}
 		}
+		// for 10 times randomly check for a chunk
 		for (int i = 0; i < 10; i++) {
 			int randomIndex = randObj.nextInt(this.chunkCount);
 
@@ -259,6 +276,7 @@ public class PeerManager {
 				return randomIndex;
 			}
 		}
+		// if not found do a sequential search
 		for (int i = 0; i < end.size() && i < this.chunkCount; i++) {
 			if (end.get(i) == true && mine.get(i) == false && this.requestedInfo[i] == null) {
 				setChunkRequestedInfo(i, peerControllerID);
@@ -269,6 +287,7 @@ public class PeerManager {
 	}
 
 	public synchronized void resetRequestedChunkInfo(String endPeerControllerID) {
+		//Unset all the chinks requested to a peer
 		for (int i = 0; i < this.requestedInfo.length; i++) {
 			if (this.requestedInfo[i] != null && this.requestedInfo[i].compareTo(endPeerControllerID) == 0) {
 				setChunkRequestedInfo(i, null);
@@ -313,6 +332,7 @@ public class PeerManager {
 	}
 
 	public int calcChunkCount() {
+		// Total number of chunk required for download to me marked complete
 		int len = (getSourceFileSize() / getChunkSize());
 		if (getSourceFileSize() % getChunkSize() != 0) {
 			len += 1;
@@ -371,6 +391,7 @@ public class PeerManager {
 	}
 
 	public synchronized boolean areAllPeersDone() {
+		// Check if all the peers have the complete files
 		for (String peerControllerID : this.chunkAvailabilityMap.keySet()) {
 			if (this.chunkAvailabilityMap.get(peerControllerID).cardinality() != this.chunkCount) {
 				return false;
@@ -411,6 +432,7 @@ public class PeerManager {
 
 	public synchronized void cancelChokes() {
 		try {
+			// Stop all the scheduler and local thread
 			this.getOptimisticUnchokeController().abortJob();
 			this.getChokeController().abortJob();
 			this.resetUnChokedPeerList();
