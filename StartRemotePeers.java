@@ -10,8 +10,6 @@
 import java.io.*;
 import java.util.*;
 
-import src.RemotePeerInfo;
-
 /*
  * The StartRemotePeers class begins remote peer processes. 
  * It reads configuration file PeerInfo.cfg and starts remote peer processes.
@@ -55,24 +53,19 @@ public class StartRemotePeers {
 	public static void main(String[] args) {
 		// TODO Auto-generated method stub
 		try {
+			
 			StartRemotePeers myStart = new StartRemotePeers();
 			myStart.getConfiguration();
-					
-			// get current path
-			String path = System.getProperty("user.dir");
-			
+				
+			String username = "manikuma.honnena";   //username to connect to remote server
+		    String projPath = "/cise/homes/manikuma.honnena/P2P"; //project path where peer process existsin remote server
+		    String pubKey = "/Users/manikumar/.ssh/id_rsa"; //pubkey path in local machine
 			// start clients at remote hosts
 			for (int i = 0; i < myStart.peerInfoVector.size(); i++) {
 				RemotePeerInfo pInfo = (RemotePeerInfo) myStart.peerInfoVector.elementAt(i);
-				
 				System.out.println("Start remote peer " + pInfo.peerId +  " at " + pInfo.peerAddress );
-				
-				// *********************** IMPORTANT *************************** //
-				// If your program is JAVA, use this line.
-				Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; java peerProcess " + pInfo.peerId);
-				
-				// If your program is C/C++, use this line instead of the above line. 
-				//Runtime.getRuntime().exec("ssh " + pInfo.peerAddress + " cd " + path + "; ./peerProcess " + pInfo.peerId);
+				Runtime.getRuntime().exec("ssh -i " + pubKey + " " + username + pInfo.peerAddress + " cd " + 
+				projPath + " ; java PeerProcess " + pInfo.peerId);
 			}		
 			System.out.println("Starting all remote peers has done." );
 

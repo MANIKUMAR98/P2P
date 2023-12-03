@@ -1,4 +1,4 @@
-package src;
+
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -78,7 +78,7 @@ public class PeerController implements Runnable {
 					this.input_stream.readFully(response);
 					char msgTypeValue = (char) response[0];
 					ActualMessage msgObj = new ActualMessage();
-					msgObj.readActualMessage(payloadLength, response);
+					msgObj.parseMessage(payloadLength, response);
 					processMessageType(Constants.MessageType.fromCode(msgTypeValue), msgObj);
 
 				}
@@ -118,7 +118,7 @@ public class PeerController implements Runnable {
 				handleNotInterestedMessage();
 				break;
 			case HAVE:
-				handleHaveMessage(am.getPieceIndexFromPayload());
+				handleHaveMessage(am.getIndexFromMessageBody());
 				break;
 			case BITFIELD:
 				handleBitFieldMessage(am.getBitFieldMessage());
@@ -194,14 +194,14 @@ public class PeerController implements Runnable {
 	private void handleRequestMessage(ActualMessage msg) {
 		if (this.coordinator.getUnChokedPeerList().contains(this.peerControllerId)
 				|| (this.coordinator.getOptimisticUnChokedPeer() != null && this.coordinator.getOptimisticUnChokedPeer().compareTo(this.peerControllerId) == 0)) {
-			int chunkIndex = msg.getPieceIndexFromPayload();
+			int chunkIndex = msg.getIndexFromMessageBody();
 			this.messageSender.transmitPieceMessage(chunkIndex, this.coordinator.inputFromFileSync(chunkIndex));
 		}
 	}
 
 	private void handlePieceMessage(ActualMessage msg) {
-		int chunkIndex = msg.getPieceIndexFromPayload();
-		byte[] chunk = msg.getPieceFromPayload();
+		int chunkIndex = msg.getIndexFromMessageBody();
+		byte[] chunk = msg.getPieceMessageFromBody();
 		this.coordinator.outputToFileSync(chunk, chunkIndex);
 		this.coordinator.updateChunkAvailability(this.coordinator.getLocalPeerID(), chunkIndex);
 		this.chunkDownloadRate++;

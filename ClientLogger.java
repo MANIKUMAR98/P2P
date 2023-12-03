@@ -1,4 +1,4 @@
-package src;
+
 
 import java.util.List;
 import java.util.logging.FileHandler;
@@ -11,7 +11,7 @@ public class ClientLogger {
 	 private String loggingFile;
 	 private String peerId;
 	 private FileHandler logFileHandlerForPeer;
-	 private Utility utility;
+	 Utility utility;
 	 private Logger clientLogger = Logger.getLogger("ClientLogger");
 	 
 	 public ClientLogger(String peerId) {
@@ -71,6 +71,10 @@ public class ClientLogger {
 	    
 	    public synchronized void storeTheDownloadCompleteLog() {
 	        this.clientLogger.log(Level.INFO, "[" + utility.getCurrentTime() + "]: Peer [" + this.peerId + "] has downloaded the complete file.");
+	    }
+	    
+	    public synchronized void updateOptimisticallyUnchokedNeighbor(String neighbourId) {
+	    	this.clientLogger.log(Level.INFO, "[" + utility.getCurrentTime() + "]: Peer [" + this.peerId  + "] has the optimistically unchoked neighbor [" + neighbourId + "]. [" + neighbourId + "]  is the peer ID of the optimistically unchoked neighbor.");
 	    }
 	    
 	    public void closeTheClientLogger() {

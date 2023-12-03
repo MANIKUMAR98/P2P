@@ -1,10 +1,9 @@
-package src;
+
 
 import java.util.*;
 
 import java.io.*;
 import java.nio.*;
-import java.math.BigInteger;
 
 public class ActualMessage {
     private int messageLength;
@@ -27,7 +26,7 @@ public class ActualMessage {
         this.messageLength = this.messagePayload.length + 1;
     }
 
-    public byte[] buildActualMessage() {
+    public byte[] generateActualMessage() {
         ByteArrayOutputStream stream = new ByteArrayOutputStream();
         try {
             byte[] bytes = ByteBuffer.allocate(4).putInt(this.messageLength).array();
@@ -40,10 +39,10 @@ public class ActualMessage {
         return stream.toByteArray();
     }
 
-    public void readActualMessage(int len, byte[] message) {
+    public void parseMessage(int len, byte[] message) {
         this.messageLength = len;
-        this.messageType = extractMessageType(message, 0);
-        this.messagePayload = extractPayload(message, 1);
+        this.messageType = messageType(message, 0);
+        this.messagePayload = getMessageBody(message, 1);
     }
 
     public int extractIntFromByteArray(byte[] message, int start) {
@@ -55,11 +54,11 @@ public class ActualMessage {
         return bb.getInt();
     }
 
-    public char extractMessageType(byte[] message, int index) {
+    public char messageType(byte[] message, int index) {
         return (char) message[index];
     }
 
-    public byte[] extractPayload(byte[] message, int index) {
+    public byte[] getMessageBody(byte[] message, int index) {
         byte[] resp = new byte[this.messageLength - 1];
         System.arraycopy(message, index, resp, 0, this.messageLength - 1);
         return resp;
@@ -71,11 +70,11 @@ public class ActualMessage {
         return bits;
     }
 
-    public int getPieceIndexFromPayload() {
+    public int getIndexFromMessageBody() {
         return extractIntFromByteArray(this.messagePayload, 0);
     }
 
-    public byte[] getPieceFromPayload() {
+    public byte[] getPieceMessageFromBody() {
         int size = this.messageLength - 5;
         byte[] piece = new byte[size];
         for (int i = 0; i < size; i++) {

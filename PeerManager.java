@@ -1,4 +1,4 @@
-package src;
+
 
 import java.io.File;
 import java.io.RandomAccessFile;
@@ -13,7 +13,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
-
+@SuppressWarnings("deprecation")
 public class PeerManager {
 	private String localPeerID;
 	private PeerInformation localConfiguration;

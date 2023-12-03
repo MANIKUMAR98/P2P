@@ -1,4 +1,4 @@
-package src;
+
 
 import java.io.*;
 import java.util.*;
@@ -23,7 +23,7 @@ public class CommonConfiguration {
                 String key = temp[0];
                 String value = temp[1];
                 switch (key) {
-					case Constants.NUMBER_OF_PREFERRED_NEIGHBORS: 
+					case Constants.NUMBER_OF_PREFERRED_NEIGHBORS:
 						this.numberOfPreferredNeighbors = Integer.parseInt(value);
 						break;
 					case Constants.UNCHOKING_INTERVAL:

@@ -1,4 +1,4 @@
-package src;
+
 
 public class Constants {
     public enum MessageType {
