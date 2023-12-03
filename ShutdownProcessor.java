@@ -21,9 +21,15 @@ public class ShutdownProcessor implements Runnable {
         this.scheduledFuture = scheduledExecutorService.scheduleAtFixedRate(this, 30, this.timeSpan, TimeUnit.SECONDS);
     }
 
+    /**
+     * Executes the run logic, checking if all peers have completed downloading.
+     * If all peers are done, it stops all PeerControllers and aborts the job.
+     * Handles exceptions by printing the stack trace.
+     */
     public void run() {
         try {
             if(this.peerManager.checkIfDone()) {
+            	// Stop all PeerControllers and abort the job
                 this.peerManager.stopAllPeerControllers();
                 this.abortJob();
             }

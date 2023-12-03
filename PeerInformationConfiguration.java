@@ -13,6 +13,12 @@ public class PeerInformationConfiguration {
 		this.peerInformation = new ArrayList<>();
 	}
 
+	/**
+	 * Initializes peer information from the "PeerInfo.cfg" file.
+	 * Reads data from the file, splits it into tokens, and creates PeerInformation
+	 * objects for each peer. Populates the remotePeerInformationMap and peerInformation list.
+	 * Handles exceptions by printing an error message.
+	 */
 	public void initilizePeerInformationFile() {
 		String data;
 		BufferedReader br;

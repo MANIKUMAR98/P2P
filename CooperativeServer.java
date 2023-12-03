@@ -17,6 +17,12 @@ public class CooperativeServer implements Runnable {
 		this.killed = false;
 	}
 
+	/**
+	 * Listens for incoming connection requests in a separate thread.
+	 * Accepts incoming socket connections, creates a new PeerController for each connection,
+	 * and starts a new thread to handle the communication with the connected peer.
+	 * Continues running until explicitly killed.
+	 */
 	public void run() {
 		while (!this.killed) {
 			try {
