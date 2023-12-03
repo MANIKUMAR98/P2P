@@ -160,7 +160,7 @@ public class PeerManager {
 			int pointer = this.getChunkSize() * chunkIndex;
 			int length = this.getChunkSize();
 			if (chunkIndex == getChunkCount() - 1) {
-				length = this.getChunkSize() % this.getChunkSize();
+				length = this.getSourceFileSize() % this.getChunkSize();
 			}
 			this.filePointer.seek(pointer);
 			byte[] chunk = new byte[length];

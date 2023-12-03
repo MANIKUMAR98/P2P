@@ -58,7 +58,7 @@ public class StartRemotePeers {
 			myStart.getConfiguration();
 				
 			String username = "manikuma.honnena";   //username to connect to remote server
-		    String projPath = "/cise/homes/manikuma.honnena/P2P"; //project path where peer process existsin remote server
+		    String projPath = "/cise/homes/manikuma.honnena/P2P"; //project path where peer process exists in remote server
 		    String pubKey = "/Users/manikumar/.ssh/id_rsa"; //pubkey path in local machine
 			// start clients at remote hosts
 			for (int i = 0; i < myStart.peerInfoVector.size(); i++) {

@@ -47,7 +47,7 @@ public class OptimisticUnchokeController implements Runnable {
                 if(nextInterestedPeer != null) {
                     PeerController nextHandler = this.peerManager.getPeerController(nextInterestedPeer);
                     nextHandler.messageSender.issueUnChokeMessage();
-                    this.peerManager.getClientLogger().storeUnchokedNeighborLog(this.peerManager.getOptimisticUnChokedPeer());
+                    this.peerManager.getClientLogger().updateOptimisticallyUnchokedNeighbor(this.peerManager.getOptimisticUnChokedPeer());
                 }
                 if (optimisticUnchokedPeer != null && !this.peerManager.getUnChokedPeerList().contains(optimisticUnchokedPeer)) {
                     this.peerManager.getPeerController(optimisticUnchokedPeer).messageSender.issueChokeMessage();
