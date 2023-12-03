@@ -1,6 +1,21 @@
 
 
 public class Constants {
+	
+	/**
+	 * Enum representing different types of messages in a network communication context.
+	 * Each message type is associated with a unique character code.
+	 *
+	 * Message Types:
+	 * - CHOKE: Indicates that the sender is choking the recipient ('0')
+	 * - UNCHOKE: Indicates that the sender is unchoking the recipient ('1')
+	 * - INTERESTED: Indicates that the sender is interested in the recipient's data ('2')
+	 * - NOT_INTERESTED: Indicates that the sender is not interested in the recipient's data ('3')
+	 * - HAVE: Indicates that the sender has a particular piece of the file ('4')
+	 * - BITFIELD: Indicates a message containing a bitfield representing the pieces the sender has ('5')
+	 * - REQUEST: Indicates a request for a piece of the file ('6')
+	 * - PIECE: Indicates a piece of the file being sent ('7')
+	 */
     public enum MessageType {
         CHOKE('0'), UNCHOKE('1'), INTERESTED('2'), NOT_INTERESTED('3'),
         HAVE('4'), BITFIELD('5'), REQUEST('6'), PIECE('7');

@@ -19,6 +19,14 @@ public class ChokeController implements Runnable {
         this.scheduledExecutorService = Executors.newScheduledThreadPool(1);
     }
 
+    /**
+     * Initializes and starts the job by scheduling it at a fixed rate using the
+     * configured time span. This method uses the scheduledExecutorService to
+     * periodically execute the 'run' method of the current instance at the specified
+     * time intervals. The scheduledFuture is assigned the reference to the
+     * scheduled task, allowing for potential cancellation or querying of the
+     * task status.
+     */
     public void initilizeTheJob() {
         this.scheduledFuture = this.scheduledExecutorService.scheduleAtFixedRate(this, 6, this.timeSpan, TimeUnit.SECONDS);
     }
@@ -35,28 +43,46 @@ public class ChokeController implements Runnable {
                 } else {
                     j = interestedPeerList.size();
                 }
+                // Check if all available chunks have been downloaded by the peer
                 if (this.peerManager.getAvailableChunkCount() == this.peerManager.getChunkCount()) {
+                	 // Iterate through a specified number of iterations (j)
                     for (int i = 0; i < j; i++) {
+                    	// Randomly select a peer from the list of interested peers
                         String interestedPeer = interestedPeerList.get(this.rand.nextInt(interestedPeerList.size()));
                         PeerController peerController = this.peerManager.getPeerController(interestedPeer);
+                        // Ensure the selected peer is not already in the peersList
                         while (peersList.contains(interestedPeer)) {
                         	interestedPeer = interestedPeerList.get(this.rand.nextInt(interestedPeerList.size()));
                         	peerController = this.peerManager.getPeerController(interestedPeer);
                         }
+                        // Check if the interested peer is not in the unchokedPeerList
                         if (!unchokedPeerList.contains(interestedPeer)) {
+                        	// Check if there is no optimistic unchoked peer or the selected peer is not the optimistic unchoked peer
                             if (this.peerManager.getOptimisticUnChokedPeer() == null || this.peerManager.getOptimisticUnChokedPeer().compareTo(interestedPeer) != 0) {
-                                this.peerManager.getUnChokedPeerList().add(interestedPeer);
+                            	// Add the interested peer to the unchokedPeerList and send an Unchoke message
+                            	this.peerManager.getUnChokedPeerList().add(interestedPeer);
                                 peerController.messageSender.issueUnChokeMessage();
                             }
                         }
                         else {
+                        	// If the interested peer is already in the unchokedPeerList, remove it
                             unchokedPeerList.remove(interestedPeer);
                         }
+                        // Add the interested peer to the peersList and reset its download rate
                         peersList.add(interestedPeer);
                         peerController.resetDownloadRate();
                     }
-                }
-                else {
+                } else {
+                	/**
+                	 * Selects and manages unchoked peers based on their download rates.
+                	 * It creates a sorted list of peers by their download rates in descending order.
+                	 * The method iterates through the sorted list, selecting peers that are in the
+                	 * interestedPeerList, not already in the unchokedPeerList, and not the optimistic
+                	 * unchoked peer. Selected peers are added to the unchoked list, and Unchoke
+                	 * messages are issued to them. If a peer is already in the unchokedPeerList,
+                	 * it is removed. The method also tracks peers in the peersList and resets
+                	 * their download rates.
+                	 * */
                     Map<String, Integer> chunkDownloadRates = new HashMap<>(this.peerManager.getChunkDownloadRates());
                     List<Map.Entry<String, Integer>> entryList = new ArrayList<>(chunkDownloadRates.entrySet());
                     Collections.sort(entryList, (a, b) -> b.getValue() - a.getValue());
@@ -108,6 +134,13 @@ public class ChokeController implements Runnable {
         });
     }
 
+    /**
+     * Aborts the job by shutting down the scheduled executor service.
+     * This method forcefully terminates the scheduled executor service,
+     * stopping all scheduled tasks and preventing any new tasks from being
+     * accepted. It is used to halt ongoing processes when an abort condition
+     * is encountered.
+     */
     public void abortJob() {
         this.scheduledExecutorService.shutdownNow();
     }

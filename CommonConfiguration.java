@@ -10,7 +10,13 @@ public class CommonConfiguration {
     public String fileName;
     public int fileSize;
     public int pieceSize;
-
+    
+    /**
+     * Initializes common configuration parameters by reading values from the "Common.cfg" file.
+     * Configuration keys and values are expected to be in the format "key value" on each line.
+     * Supported keys include Constants.NUMBER_OF_PREFERRED_NEIGHBORS, Constants.UNCHOKING_INTERVAL,
+     * Constants.OPTIMISTIC_UNCHOKING_INTERVAL, Constants.FILE_NAME, Constants.FILE_SIZE, and Constants.PIECE_SIZE.
+     */
     public void InitilizeCommonConfiguration() {
     	FileReader fileReader = null;
         Scanner scanner = null;
